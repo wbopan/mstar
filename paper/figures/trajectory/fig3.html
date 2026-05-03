@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fig 3 — Evolution trajectory on ALFWorld</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600&display=block" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Regular.ttf") format("truetype");
+      font-weight: 400; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Bold.ttf") format("truetype");
+      font-weight: 700; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Italic.ttf") format("truetype");
+      font-weight: 400; font-style: italic;
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; font-family: "Libertinus Sans", sans-serif; }
+  </style>
+</head>
+<body>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const SEEDS = [0.500, 0.467, 0.500];
+const CHILDREN = [
+  [1, 0.467], [2, 0.433], [3, 0.300], [4, 0.467],
+  [5, 0.600], [6, null],
+  [7, 0.567], [8, 0.433], [9, 0.600], [10, 0.500],
+  [11, 0.600], [12, 0.600], [13, 0.667],
+  [14, 0.467], [15, 0.633], [16, 0.700],
+  [17, 0.600], [18, 0.533], [19, null], [20, 0.000],
+];
+const BASELINE_RAG = 0.500;
+const KEY_ITERS = { 5: "1", 13: "2", 16: "3" };
+
+// ============================================================
+// LAYOUT
+// ============================================================
+const TOTAL_W = 700, GAP = 14, PANEL_SCALE = 0.88;
+const CHART_W = 420, CHART_H = 220;
+const P1_W = 270, BOT_H = 230;
+const P2_W = TOTAL_W - P1_W - GAP;
+const ROW2_Y = CHART_H + GAP - 4;
+const TOTAL_H = ROW2_Y + BOT_H;
+// P3_W sized so its scaled right edge aligns with Panel ②'s scaled right edge
+const P2_SCALED_RIGHT = (P1_W + GAP) + P2_W * PANEL_SCALE;
+const P3_W = (P2_SCALED_RIGHT - (CHART_W + GAP)) / PANEL_SCALE, P3_H = CHART_H;
+
+// Scaled panel edge positions (for zoom lines)
+const P3_LEFT = CHART_W + GAP, P3_TOP = 0;
+const P3_BOTTOM = P3_H * PANEL_SCALE;
+const P1_RIGHT = P1_W, P1_TOP = ROW2_Y;
+const P1_LEFT = P1_W * (1 - PANEL_SCALE);
+const P2_LEFT_EDGE = P1_W + GAP;
+const P2_RIGHT = P2_LEFT_EDGE + P2_W * PANEL_SCALE;
+
+// ============================================================
+// COLORS — saturated, vivid
+// ============================================================
+const C_SCATTER = "#9e9e9e";
+const C_BEST = "#c0392b";
+const C_BASELINE = "#7f8c8d";
+const C_KEY = "#2c3e50";
+const C_FAIL = "#e74c3c";
+const C_P1 = "#1565C0", C_P2 = "#00897B", C_P3 = "#E65100";
+const C_P1_BG = "#E3F2FD", C_P2_BG = "#E0F2F1", C_P3_BG = "#FBE9E7";
+const FONT = "Libertinus Sans, sans-serif";
+const MONO = "Source Code Pro, monospace";
+
+// Syntax highlight colors (One Light inspired)
+const SYN = {
+  kw: '#a626a4',    // keywords: if, for, return, class, def
+  str: '#50a14f',   // strings
+  num: '#986801',   // numbers
+  comment: '#a0a1a7', // comments
+  fn: '#4078f2',    // function names
+  cls: '#c18401',   // class names
+  op: '#383a42',    // operators
+  fg: '#383a42',    // default foreground
+};
+
+// ============================================================
+// ROOT SVG
+// ============================================================
+const svg = d3.select("body").append("svg")
+  .attr("width", TOTAL_W).attr("height", TOTAL_H)
+  .attr("xmlns", "http://www.w3.org/2000/svg");
+const defs = svg.append("defs");
+
+// ============================================================
+// 1. TRAJECTORY CHART
+// ============================================================
+const margin = { top: 4, right: 10, bottom: 32, left: 36 };
+const iw = CHART_W - margin.left - margin.right;
+const ih = CHART_H - margin.top - margin.bottom;
+const x = d3.scaleLinear().domain([-1.5, 21.5]).range([0, iw]);
+const y = d3.scaleLinear().domain([0.40, 0.76]).range([ih, 0]);
+
+defs.append("clipPath").attr("id", "chart-clip")
+  .append("rect").attr("width", CHART_W).attr("height", CHART_H);
+const cg = svg.append("g").attr("clip-path", "url(#chart-clip)")
+  .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+// Phase bands with gradient
+[{ x0: -0.5, x1: 4.5, color: C_P1 },
+ { x0: 4.5, x1: 12.5, color: C_P2 },
+ { x0: 12.5, x1: 20.5, color: C_P3 }].forEach((b, i) => {
+  const grd = defs.append("linearGradient").attr("id", `band${i}`)
+    .attr("x1","0%").attr("y1","0%").attr("x2","0%").attr("y2","100%");
+  grd.append("stop").attr("offset","0%").attr("stop-color", b.color).attr("stop-opacity", 0.10);
+  grd.append("stop").attr("offset","100%").attr("stop-color", b.color).attr("stop-opacity", 0.03);
+  cg.append("rect").attr("x", x(b.x0)).attr("y", 0)
+    .attr("width", x(b.x1)-x(b.x0)).attr("height", ih).attr("fill", `url(#band${i})`);
+});
+
+// Grid lines (light, no border box)
+[0.4,0.5,0.6,0.7].forEach(t => {
+  cg.append("line").attr("x1",0).attr("x2",iw).attr("y1",y(t)).attr("y2",y(t))
+    .attr("stroke","#e8e8e8").attr("stroke-width",0.5);
+});
+
+// Bottom axis — solid, dark
+cg.append("g").attr("transform",`translate(0,${ih})`)
+  .call(d3.axisBottom(x).tickValues([0,5,10,15,20]).tickSize(4))
+  .call(g=>g.select(".domain").attr("stroke","#333").attr("stroke-width",1.2))
+  .call(g=>g.selectAll(".tick line").attr("stroke","#333"))
+  .call(g=>g.selectAll(".tick text").attr("font-size","10px").attr("fill","#444").attr("font-family",FONT));
+cg.append("text").attr("x",iw/2).attr("y",ih+26)
+  .attr("text-anchor","middle").attr("font-size","11px").attr("font-weight","700").attr("fill","#333").attr("font-family",FONT).text("Iteration");
+
+// Left axis — solid, dark
+cg.append("g")
+  .call(d3.axisLeft(y).tickValues([0.4,0.5,0.6,0.7]).tickSize(4).tickFormat(d3.format(".1f")))
+  .call(g=>g.select(".domain").attr("stroke","#333").attr("stroke-width",1.2))
+  .call(g=>g.selectAll(".tick line").attr("stroke","#333"))
+  .call(g=>g.selectAll(".tick text").attr("font-size","10px").attr("fill","#444").attr("font-family",FONT));
+cg.append("text").attr("transform","rotate(-90)").attr("x",-ih/2).attr("y",-26)
+  .attr("text-anchor","middle").attr("font-size","11px").attr("font-weight","700").attr("fill","#333").attr("font-family",FONT).text("Validation Score");
+
+// Baseline
+cg.append("line").attr("x1",0).attr("x2",iw).attr("y1",y(BASELINE_RAG)).attr("y2",y(BASELINE_RAG))
+  .attr("stroke",C_BASELINE).attr("stroke-width",1).attr("stroke-dasharray","6,4").attr("opacity",0.5);
+
+// Scatter
+SEEDS.forEach((s,i) => {
+  cg.append("circle").attr("cx",x((i-1)*0.25)).attr("cy",y(s))
+    .attr("r",3.5).attr("fill",C_SCATTER).attr("opacity",0.45).attr("stroke","white").attr("stroke-width",0.5);
+});
+CHILDREN.forEach(([it,s]) => {
+  if (s !== null) cg.append("circle").attr("cx",x(it)).attr("cy",y(s))
+    .attr("r",3.5).attr("fill",C_SCATTER).attr("opacity",0.45).attr("stroke","white").attr("stroke-width",0.5);
+});
+
+// Step line
+const bestData = [{it:0, score:Math.max(...SEEDS)}];
+let curBest = bestData[0].score;
+CHILDREN.forEach(([it,s]) => { if(s!==null) curBest=Math.max(curBest,s); bestData.push({it,score:curBest}); });
+const stepPath = d3.line().x(d=>x(d.it)).y(d=>y(d.score)).curve(d3.curveStepAfter);
+cg.append("path").datum(bestData).attr("d",stepPath)
+  .attr("fill","none").attr("stroke",C_BEST).attr("stroke-width",2.2).attr("stroke-linecap","round");
+
+// Compile fail
+CHILDREN.forEach(([it,s]) => { if(s===null) {
+  const cx=x(it),cy=y(0.41),sz=5;
+  cg.append("line").attr("x1",cx-sz).attr("y1",cy-sz).attr("x2",cx+sz).attr("y2",cy+sz)
+    .attr("stroke","#aaa").attr("stroke-width",1.5).attr("stroke-linecap","round");
+  cg.append("line").attr("x1",cx+sz).attr("y1",cy-sz).attr("x2",cx-sz).attr("y2",cy+sz)
+    .attr("stroke","#aaa").attr("stroke-width",1.5).attr("stroke-linecap","round");
+}});
+
+// Key markers
+const markerColors = {5:C_P1, 13:C_P2, 16:C_P3};
+const keyPixels = {};
+Object.entries(KEY_ITERS).forEach(([itStr, symbol]) => {
+  const it=+itStr, score=CHILDREN.find(([i])=>i===it)[1];
+  const cx=x(it), cy=y(score), mc=markerColors[it];
+  cg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",10).attr("fill","white").attr("stroke",mc).attr("stroke-width",2.2);
+  cg.append("text").attr("x",cx).attr("y",cy+0.5)
+    .attr("text-anchor","middle").attr("dominant-baseline","central")
+    .attr("font-size","13px").attr("font-weight","700").attr("fill",mc).attr("font-family",FONT).text(symbol);
+  keyPixels[it] = {x:margin.left+cx, y:margin.top+cy};
+});
+
+// Legend
+const legendX=iw-96, legendY=ih-72;
+const lg = cg.append("g").attr("transform",`translate(${legendX},${legendY})`);
+lg.append("rect").attr("x",-6).attr("y",-6).attr("width",102).attr("height",72)
+  .attr("fill","white").attr("fill-opacity",0.95).attr("stroke","#ddd").attr("stroke-width",0.5).attr("rx",3);
+[{type:"line",color:C_BEST,label:"Best so far",y:7},
+ {type:"dot",color:C_SCATTER,label:"Child score",y:23},
+ {type:"x",color:C_FAIL,label:"Compile fail",y:39},
+ {type:"dash",color:C_BASELINE,label:"Vanilla RAG",y:55}].forEach(item => {
+  if(item.type==="line") lg.append("line").attr("x1",0).attr("y1",item.y).attr("x2",14).attr("y2",item.y)
+    .attr("stroke",item.color).attr("stroke-width",2).attr("stroke-linecap","round");
+  else if(item.type==="dot") lg.append("circle").attr("cx",7).attr("cy",item.y)
+    .attr("r",3).attr("fill",item.color).attr("opacity",0.5).attr("stroke","white").attr("stroke-width",0.4);
+  else if(item.type==="x") { const sz=3.5;
+    lg.append("line").attr("x1",7-sz).attr("y1",item.y-sz).attr("x2",7+sz).attr("y2",item.y+sz)
+      .attr("stroke","#aaa").attr("stroke-width",1.2).attr("stroke-linecap","round");
+    lg.append("line").attr("x1",7+sz).attr("y1",item.y-sz).attr("x2",7-sz).attr("y2",item.y+sz)
+      .attr("stroke","#aaa").attr("stroke-width",1.2).attr("stroke-linecap","round");
+  } else lg.append("line").attr("x1",0).attr("y1",item.y).attr("x2",14).attr("y2",item.y)
+    .attr("stroke",item.color).attr("stroke-width",1).attr("stroke-dasharray","4,3").attr("opacity",0.5);
+  lg.append("text").attr("x",20).attr("y",item.y+1)
+    .attr("dominant-baseline","central").attr("font-size","9px").attr("fill","#555").attr("font-family",FONT).text(item.label);
+});
+
+// ============================================================
+// 2. ZOOM LINES — straight, tangent to the marker circle, themed color
+// ============================================================
+const MARKER_R = 10; // must match the key marker circle radius above
+
+// Draw a pair of zoom lines from a marker circle to two panel corners.
+// Each line starts at the tangent point on the circle for that target,
+// choosing the outer tangent so the two lines splay outward.
+function drawZoomPair(cx, cy, tgt1, tgt2, color) {
+  // Determine sign convention from cross product of direction vectors
+  // so the two tangent lines splay outward (don't cross)
+  const d1x = tgt1[0] - cx, d1y = tgt1[1] - cy;
+  const d2x = tgt2[0] - cx, d2y = tgt2[1] - cy;
+  const cross = d1x * d2y - d1y * d2x; // positive = tgt1 is CW from tgt2
+
+  [tgt1, tgt2].forEach((tgt, i) => {
+    const dx = tgt[0] - cx, dy = tgt[1] - cy;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    const theta = Math.atan2(dy, dx);
+    const alpha = Math.acos(MARKER_R / d);
+
+    // Pick the outer tangent: sign depends on cross product direction
+    // Flip convention so lines splay outward (don't cross)
+    const sign = (cross > 0) === (i === 0) ? -1 : 1;
+    const tangentAngle = theta + sign * alpha;
+    const startX = cx + MARKER_R * Math.cos(tangentAngle);
+    const startY = cy + MARKER_R * Math.sin(tangentAngle);
+
+    svg.append("line")
+      .attr("x1", startX).attr("y1", startY)
+      .attr("x2", tgt[0]).attr("y2", tgt[1])
+      .attr("stroke", color).attr("stroke-width", 0.7).attr("opacity", 0.45);
+  });
+}
+
+// Panel ③ (top-right): from marker 16 to left edge of scaled panel
+drawZoomPair(keyPixels[16].x, keyPixels[16].y,
+  [P3_LEFT, P3_TOP], [P3_LEFT, P3_BOTTOM], C_P3);
+
+// Panel ① (bottom-left): from marker 5 to top edge of scaled panel
+drawZoomPair(keyPixels[5].x, keyPixels[5].y,
+  [P1_LEFT, P1_TOP], [P1_RIGHT, P1_TOP], C_P1);
+
+// Panel ② (bottom-right): from marker 13 to top edge of scaled panel
+drawZoomPair(keyPixels[13].x, keyPixels[13].y,
+  [P2_LEFT_EDGE, P1_TOP], [P2_RIGHT, P1_TOP], C_P2);
+
+// ============================================================
+// 3. PANELS — pure SVG, no foreignObject, sharp corners, thick colored borders
+// ============================================================
+
+// Panel clip counter
+let panelClipId = 0;
+
+// Helper: draw a panel with header
+function drawPanel(parent, px, py, pw, ph, accentColor, bgColor, idText, scoreText, titleText) {
+  const clipId = `panel-clip-${panelClipId++}`;
+  defs.append("clipPath").attr("id", clipId)
+    .append("rect").attr("x", px).attr("y", py).attr("width", pw).attr("height", ph);
+
+  const g = parent.append("g").attr("clip-path", `url(#${clipId})`);
+  const headerH = 28;
+
+  // Panel background — sharp corners, thick colored border
+  g.append("rect").attr("x", px).attr("y", py).attr("width", pw).attr("height", ph)
+    .attr("fill", "#fff").attr("stroke", accentColor).attr("stroke-width", 2);
+
+  // Header background
+  g.append("rect").attr("x", px+1).attr("y", py+1).attr("width", pw-2).attr("height", headerH)
+    .attr("fill", bgColor);
+
+  // Header divider
+  g.append("line").attr("x1", px).attr("y1", py+headerH+1).attr("x2", px+pw).attr("y2", py+headerH+1)
+    .attr("stroke", accentColor).attr("stroke-width", 0.8);
+
+  // ID badge
+  g.append("text").attr("x", px+8).attr("y", py+11)
+    .attr("font-size", "11.5px").attr("font-weight", "700").attr("fill", accentColor).attr("font-family", FONT)
+    .text(idText);
+
+  // Score range
+  g.append("text").attr("x", px+pw-8).attr("y", py+11)
+    .attr("text-anchor", "end").attr("font-size", "10px").attr("font-weight", "600").attr("fill", "#888").attr("font-family", FONT)
+    .text(scoreText);
+
+  // Title
+  g.append("text").attr("x", px+8).attr("y", py+24)
+    .attr("font-size", "11.5px").attr("font-weight", "700").attr("fill", "#222").attr("font-family", FONT)
+    .text(titleText);
+
+  return { g, pw, contentY: py + headerH + 5 };
+}
+
+// Helper: draw a syntax-highlighted code line using tspan for correct spacing
+// pw = panel width (for background rect clipping)
+function drawCodeLine(g, px, cy, tokens, isAdd, isDel, pw) {
+  const bgW = pw || 999;
+  if (isAdd) {
+    g.append("rect").attr("x", px+1).attr("y", cy-5.5).attr("width", bgW-2).attr("height", 11)
+      .attr("fill", "#e6ffed");
+  } else if (isDel) {
+    g.append("rect").attr("x", px+1).attr("y", cy-5.5).attr("width", bgW-2).attr("height", 11)
+      .attr("fill", "#ffeef0");
+  }
+
+  const textEl = g.append("text").attr("x", px + 6).attr("y", cy+3)
+    .attr("font-size", "8.5px").attr("font-family", MONO).attr("fill", SYN.fg);
+  tokens.forEach(([text, color]) => {
+    textEl.append("tspan").attr("fill", color || SYN.fg).text(text);
+  });
+}
+
+// Helper: draw annotation note at end of line
+function drawNote(g, px, pw, cy, text, color) {
+  g.append("text").attr("x", px+pw-10).attr("y", cy+3)
+    .attr("text-anchor", "end").attr("font-size", "8.5px").attr("font-weight", "600").attr("font-style", "italic")
+    .attr("fill", color).attr("font-family", FONT)
+    .text(text);
+}
+
+// Helper: draw separator line
+function drawSep(g, px, pw, cy) {
+  g.append("line").attr("x1", px+6).attr("y1", cy).attr("x2", px+pw-6).attr("y2", cy)
+    .attr("stroke", "#e0e0e0").attr("stroke-width", 0.5);
+}
+
+// Helper: draw key insight box
+function drawInsight(g, px, cy, pw, text, accentColor) {
+  const boxW = pw - 16, boxH = 16;
+  g.append("rect").attr("x", px+8).attr("y", cy).attr("width", boxW).attr("height", boxH)
+    .attr("fill", accentColor).attr("fill-opacity", 0.08).attr("stroke", "none");
+  g.append("rect").attr("x", px+8).attr("y", cy).attr("width", 2.5).attr("height", boxH)
+    .attr("fill", accentColor);
+  g.append("text").attr("x", px+16).attr("y", cy+11)
+    .attr("font-size", "7px").attr("fill", accentColor).attr("font-family", FONT)
+    .text(text);
+}
+
+// ============================================================
+// Panel ① — Structured Storage (bottom-left, anchor top-right)
+// ============================================================
+{
+  const wrapper = svg.append("g").attr("transform",
+    `translate(${P1_W},${ROW2_Y}) scale(${PANEL_SCALE}) translate(${-P1_W},${-ROW2_Y})`);
+  const px = 0, pw = P1_W;
+  const { g, contentY } = drawPanel(wrapper, px, ROW2_Y, pw, BOT_H, C_P1, C_P1_BG,
+    "\u2776 Iter\u200905", "0.50 \u2192 0.60",
+    "Store observations as structured task records");
+
+  const LH = 12;
+  let cy = contentY + 4;
+
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["lessons.append(...)", SYN.fg]], false, true, pw);
+  drawNote(g, px, pw, cy, "dump all", "#cf222e");
+  cy += LH;
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["facts.append(...)", SYN.fg]], false, true, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["return", SYN.kw], [" ALL stored text", SYN.fg]], false, true, pw);
+  drawNote(g, px, pw, cy, "no retrieval", "#cf222e");
+  cy += LH + 2;
+
+  drawSep(g, px, pw, cy);
+  cy += 6;
+
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["record = {", SYN.fg]], true, false, pw);
+  drawNote(g, px, pw, cy, "typed fields", "#1a7f37");
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ['    "target_object"', SYN.str], [": ...,", SYN.fg]], true, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ['    "state"', SYN.str], [": ...,", SYN.fg]], true, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ['    "tool"', SYN.str], [":  ...,", SYN.fg]], true, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ['    "target"', SYN.str], [": ...,", SYN.fg]], true, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ['    "tokens"', SYN.str], [": ", SYN.fg], ["tokenize", SYN.fn], ["(blob)", SYN.fg]], true, false, pw);
+  drawNote(g, px, pw, cy, "bag-of-words", "#1a7f37");
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["  }", SYN.op]], true, false, pw);
+  cy += LH + 2;
+
+  drawSep(g, px, pw, cy);
+  cy += 6;
+
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["sig = ", SYN.fg], ["sha1", SYN.fn], ["(text).", SYN.fg], ["hexdigest", SYN.fn], ["()", SYN.fg]], true, false, pw);
+  drawNote(g, px, pw, cy, "dedup", "#1a7f37");
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["if", SYN.kw], [" sig ", SYN.fg], ["in", SYN.kw], [" self.seen: ", SYN.fg], ["return", SYN.kw]], true, false, pw);
+}
+
+// ============================================================
+// Panel ② — Weighted Retrieval (bottom-right, anchor top-left)
+// ============================================================
+{
+  const wrapper = svg.append("g").attr("transform",
+    `translate(${P1_W+GAP},${ROW2_Y}) scale(${PANEL_SCALE}) translate(${-(P1_W+GAP)},${-ROW2_Y})`);
+  const px = P1_W+GAP, pw = P2_W;
+  const { g, contentY } = drawPanel(wrapper, px, ROW2_Y, pw, BOT_H, C_P2, C_P2_BG,
+    "\u2777 Iter\u200913", "0.60 \u2192 0.67",
+    "Increase weights for key fields; drop LLM call");
+
+  const LH = 12;
+  let cy = contentY + 4;
+
+  drawCodeLine(g, px, cy, [["  ", SYN.fg], ["if", SYN.kw], [" q_obj == rec[", SYN.fg], ['"primary_object"', SYN.str], ["]:", SYN.fg]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["    score += ", SYN.fg], ["6", SYN.num]], false, true, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["    score += ", SYN.fg], ["8", SYN.num]], true, false, pw);
+  drawNote(g, px, pw, cy, "object ID most critical", "#1a7f37");
+  cy += LH;
+
+  drawCodeLine(g, px, cy, [["  ", SYN.fg], ["elif", SYN.kw], [" q_obj ", SYN.fg], ["in", SYN.kw], [" rec[", SYN.fg], ['"tokens"', SYN.str], ["]:", SYN.fg]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["    score += ", SYN.fg], ["2", SYN.num]], false, true, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["    score += ", SYN.fg], ["4", SYN.num]], true, false, pw);
+  drawNote(g, px, pw, cy, "doubled", "#1a7f37");
+  cy += LH;
+
+  drawCodeLine(g, px, cy, [["  ", SYN.fg], ["if", SYN.kw], [" q_loc == rec[", SYN.fg], ['"target_location"', SYN.str], ["]:", SYN.fg]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["    score += ", SYN.fg], ["3", SYN.num]], false, true, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["    score += ", SYN.fg], ["5", SYN.num]], true, false, pw);
+  drawNote(g, px, pw, cy, "location \u2191", "#1a7f37");
+  cy += LH;
+
+  drawCodeLine(g, px, cy, [["  ", SYN.fg], ["if", SYN.kw], [" q_state == rec[", SYN.fg], ['"required_state"', SYN.str], ["]:", SYN.fg]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["    score += ", SYN.fg], ["4", SYN.num]], false, true, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["    score += ", SYN.fg], ["5", SYN.num]], true, false, pw);
+  cy += LH + 2;
+
+  drawSep(g, px, pw, cy);
+  cy += 6;
+
+  drawCodeLine(g, px, cy, [["- ", SYN.comment], ["return", SYN.kw], [" llm_synthesize(top)", SYN.fg]], false, true, pw);
+  drawNote(g, px, pw, cy, "LLM call", "#cf222e");
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["return", SYN.kw], [" format_top4(ranked)", SYN.fg]], true, false, pw);
+  drawNote(g, px, pw, cy, "no LLM \u2714", "#1a7f37");
+}
+
+// ============================================================
+// Panel ③ — Error Prevention (top-right, anchor top-left)
+// ============================================================
+{
+  const wrapper = svg.append("g").attr("transform",
+    `translate(${CHART_W+GAP},0) scale(${PANEL_SCALE}) translate(${-(CHART_W+GAP)},0)`);
+  const px = CHART_W+GAP, pw = P3_W;
+  const { g, contentY } = drawPanel(wrapper, px, 0, pw, P3_H, C_P3, C_P3_BG,
+    "\u2778 Iter\u200916", "0.67 \u2192 0.70",
+    "Penalize mismatches; generate task checklist");
+
+  const LH = 12;
+  let cy = contentY + 4;
+
+  drawCodeLine(g, px, cy, [["  ", SYN.fg], ["if", SYN.kw], [" q_primary == rec[", SYN.fg], ['"primary_obj"', SYN.str], ["]:", SYN.fg]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["      score += ", SYN.fg], ["4.0", SYN.num]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["  ", SYN.fg], ["else", SYN.kw], [":", SYN.op]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["      score -= ", SYN.fg], ["1.8", SYN.num]], true, false, pw);
+  drawNote(g, px, pw, cy, "wrong-obj penalty", "#1a7f37");
+  cy += LH;
+
+  drawCodeLine(g, px, cy, [["  ", SYN.fg], ["if", SYN.kw], [" q_action != rec[", SYN.fg], ['"action_type"', SYN.str], ["]:", SYN.fg]], false, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["      score -= ", SYN.fg], ["0.4", SYN.num]], true, false, pw);
+  drawNote(g, px, pw, cy, "action mismatch", "#1a7f37");
+  cy += LH + 2;
+
+  drawSep(g, px, pw, cy);
+  cy += 6;
+
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ['lines.append("Exec checklist:")', SYN.fg]], true, false, pw);
+  drawNote(g, px, pw, cy, "checklist", "#1a7f37");
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["lines.append(", SYN.fg], ["f", SYN.kw], ['"- Only: {q_ent[:4]}"', SYN.str], [")", SYN.fg]], true, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ['lines.append("- Never substitute")', SYN.fg]], true, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["if", SYN.kw], [" q_state ", SYN.fg], ["and", SYN.kw], [" q_primary:", SYN.fg]], true, false, pw);
+  cy += LH;
+  drawCodeLine(g, px, cy, [["+ ", SYN.comment], ["    lines.append(", SYN.fg], ["f", SYN.kw], ['"- {q_state}"', SYN.str], [")", SYN.fg]], true, false, pw);
+}
+
+</script>
+</body>
+</html>

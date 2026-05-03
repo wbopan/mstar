@@ -7,19 +7,19 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from programmaticmemory.evolution.types import DataItem, Dataset
+from mstar.evolution.types import DataItem, Dataset
 
 
 class TestScienceWorldWrapper:
     def test_reset_returns_text_observation(self):
-        from programmaticmemory.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
+        from mstar.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
 
         mock_env = MagicMock()
         mock_env.reset.return_value = ("You are in the kitchen.", {})
         mock_env.get_task_description.return_value = "Boil water."
 
         with patch(
-            "programmaticmemory.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
+            "mstar.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
             return_value=mock_env,
         ):
             wrapper = ScienceWorldWrapper("boil", 0)
@@ -29,7 +29,7 @@ class TestScienceWorldWrapper:
         assert "kitchen" in obs.lower() or "Boil" in obs
 
     def test_step_returns_obs_progress_done(self):
-        from programmaticmemory.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
+        from mstar.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
 
         mock_env = MagicMock()
         mock_env.reset.return_value = ("Kitchen.", {})
@@ -37,7 +37,7 @@ class TestScienceWorldWrapper:
         mock_env.step.return_value = ("The water is now hot.", 1, False, {"score": 50})
 
         with patch(
-            "programmaticmemory.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
+            "mstar.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
             return_value=mock_env,
         ):
             wrapper = ScienceWorldWrapper("boil", 0)
@@ -49,7 +49,7 @@ class TestScienceWorldWrapper:
         assert done is False
 
     def test_get_valid_actions_returns_list(self):
-        from programmaticmemory.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
+        from mstar.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
 
         mock_env = MagicMock()
         mock_env.reset.return_value = ("Kitchen.", {})
@@ -61,7 +61,7 @@ class TestScienceWorldWrapper:
         ]
 
         with patch(
-            "programmaticmemory.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
+            "mstar.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
             return_value=mock_env,
         ):
             wrapper = ScienceWorldWrapper("boil", 0)
@@ -73,14 +73,14 @@ class TestScienceWorldWrapper:
         assert "pick up thermometer" in actions
 
     def test_close_cleans_up(self):
-        from programmaticmemory.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
+        from mstar.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
 
         mock_env = MagicMock()
         mock_env.reset.return_value = ("Kitchen.", {})
         mock_env.get_task_description.return_value = "Boil water."
 
         with patch(
-            "programmaticmemory.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
+            "mstar.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
             return_value=mock_env,
         ):
             wrapper = ScienceWorldWrapper("boil", 0)
@@ -91,7 +91,7 @@ class TestScienceWorldWrapper:
 
     def test_progress_rate_monotonic(self):
         """Progress rate should track max score seen (monotonic)."""
-        from programmaticmemory.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
+        from mstar.benchmarks._scienceworld_wrapper import ScienceWorldWrapper
 
         mock_env = MagicMock()
         mock_env.reset.return_value = ("Kitchen.", {})
@@ -103,7 +103,7 @@ class TestScienceWorldWrapper:
         ]
 
         with patch(
-            "programmaticmemory.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
+            "mstar.benchmarks._scienceworld_wrapper.ScienceWorldEnv",
             return_value=mock_env,
         ):
             wrapper = ScienceWorldWrapper("boil", 0)
@@ -121,7 +121,7 @@ class TestBabyAIGridToText:
     """Test the grid-to-text observation conversion."""
 
     def test_empty_room_description(self):
-        from programmaticmemory.benchmarks._babyai_wrapper import grid_to_text
+        from mstar.benchmarks._babyai_wrapper import grid_to_text
 
         grid = np.ones((7, 7, 3), dtype=np.uint8)
         grid[:, :, 0] = 1  # empty
@@ -132,7 +132,7 @@ class TestBabyAIGridToText:
         assert len(text) > 0
 
     def test_object_in_view(self):
-        from programmaticmemory.benchmarks._babyai_wrapper import grid_to_text
+        from mstar.benchmarks._babyai_wrapper import grid_to_text
 
         grid = np.ones((7, 7, 3), dtype=np.uint8)
         grid[:, :, 0] = 1  # empty
@@ -146,7 +146,7 @@ class TestBabyAIGridToText:
         assert "red" in text.lower()
 
     def test_carrying_object_mentioned(self):
-        from programmaticmemory.benchmarks._babyai_wrapper import grid_to_text
+        from mstar.benchmarks._babyai_wrapper import grid_to_text
 
         grid = np.ones((7, 7, 3), dtype=np.uint8)
         grid[:, :, 0] = 1
@@ -160,7 +160,7 @@ class TestBabyAIGridToText:
 
 class TestBabyAIWrapper:
     def test_reset_returns_text(self):
-        from programmaticmemory.benchmarks._babyai_wrapper import BabyAIWrapper
+        from mstar.benchmarks._babyai_wrapper import BabyAIWrapper
 
         mock_env = MagicMock()
         grid = np.ones((7, 7, 3), dtype=np.uint8)
@@ -175,7 +175,7 @@ class TestBabyAIWrapper:
         mock_gym = MagicMock()
         mock_gym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._babyai_wrapper.gym",
+            "mstar.benchmarks._babyai_wrapper.gym",
             mock_gym,
         ):
             wrapper = BabyAIWrapper("BabyAI-GoToRedBall-v0", seed=42)
@@ -185,7 +185,7 @@ class TestBabyAIWrapper:
         assert "red ball" in obs.lower()
 
     def test_step_turn_left(self):
-        from programmaticmemory.benchmarks._babyai_wrapper import BabyAIWrapper
+        from mstar.benchmarks._babyai_wrapper import BabyAIWrapper
 
         mock_env = MagicMock()
         grid = np.ones((7, 7, 3), dtype=np.uint8)
@@ -207,7 +207,7 @@ class TestBabyAIWrapper:
         mock_gym = MagicMock()
         mock_gym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._babyai_wrapper.gym",
+            "mstar.benchmarks._babyai_wrapper.gym",
             mock_gym,
         ):
             wrapper = BabyAIWrapper("BabyAI-GoToRedBall-v0", seed=42)
@@ -218,7 +218,7 @@ class TestBabyAIWrapper:
         mock_env.step.assert_called_with(0)  # 0 = turn_left
 
     def test_get_valid_actions_always_has_turn(self):
-        from programmaticmemory.benchmarks._babyai_wrapper import BabyAIWrapper
+        from mstar.benchmarks._babyai_wrapper import BabyAIWrapper
 
         mock_env = MagicMock()
         grid = np.ones((7, 7, 3), dtype=np.uint8)
@@ -233,7 +233,7 @@ class TestBabyAIWrapper:
         mock_gym = MagicMock()
         mock_gym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._babyai_wrapper.gym",
+            "mstar.benchmarks._babyai_wrapper.gym",
             mock_gym,
         ):
             wrapper = BabyAIWrapper("BabyAI-GoToRedBall-v0", seed=42)
@@ -244,7 +244,7 @@ class TestBabyAIWrapper:
         assert "turn right" in actions
 
     def test_close(self):
-        from programmaticmemory.benchmarks._babyai_wrapper import BabyAIWrapper
+        from mstar.benchmarks._babyai_wrapper import BabyAIWrapper
 
         mock_env = MagicMock()
         grid = np.ones((7, 7, 3), dtype=np.uint8)
@@ -259,7 +259,7 @@ class TestBabyAIWrapper:
         mock_gym = MagicMock()
         mock_gym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._babyai_wrapper.gym",
+            "mstar.benchmarks._babyai_wrapper.gym",
             mock_gym,
         ):
             wrapper = BabyAIWrapper("BabyAI-GoToRedBall-v0", seed=42)
@@ -271,7 +271,7 @@ class TestBabyAIWrapper:
 
 class TestPDDLWrapper:
     def test_reset_returns_text(self):
-        from programmaticmemory.benchmarks._pddl_wrapper import PDDLWrapper
+        from mstar.benchmarks._pddl_wrapper import PDDLWrapper
 
         mock_env = MagicMock()
         mock_state = MagicMock()
@@ -287,7 +287,7 @@ class TestPDDLWrapper:
         mock_pddlgym = MagicMock()
         mock_pddlgym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._pddl_wrapper.pddlgym",
+            "mstar.benchmarks._pddl_wrapper.pddlgym",
             mock_pddlgym,
         ):
             wrapper = PDDLWrapper("PDDLEnvBlocks-v0", 0)
@@ -297,7 +297,7 @@ class TestPDDLWrapper:
         assert len(obs) > 0
 
     def test_progress_rate_partial_goal(self):
-        from programmaticmemory.benchmarks._pddl_wrapper import PDDLWrapper
+        from mstar.benchmarks._pddl_wrapper import PDDLWrapper
 
         mock_env = MagicMock()
         # Initial state for reset
@@ -320,7 +320,7 @@ class TestPDDLWrapper:
         mock_pddlgym = MagicMock()
         mock_pddlgym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._pddl_wrapper.pddlgym",
+            "mstar.benchmarks._pddl_wrapper.pddlgym",
             mock_pddlgym,
         ):
             wrapper = PDDLWrapper("PDDLEnvBlocks-v0", 0)
@@ -330,7 +330,7 @@ class TestPDDLWrapper:
         assert progress == 0.5  # 1 of 2 goals satisfied
 
     def test_get_valid_actions(self):
-        from programmaticmemory.benchmarks._pddl_wrapper import PDDLWrapper
+        from mstar.benchmarks._pddl_wrapper import PDDLWrapper
 
         mock_env = MagicMock()
         mock_state = MagicMock()
@@ -343,7 +343,7 @@ class TestPDDLWrapper:
         mock_pddlgym = MagicMock()
         mock_pddlgym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._pddl_wrapper.pddlgym",
+            "mstar.benchmarks._pddl_wrapper.pddlgym",
             mock_pddlgym,
         ):
             wrapper = PDDLWrapper("PDDLEnvBlocks-v0", 0)
@@ -354,7 +354,7 @@ class TestPDDLWrapper:
         assert len(actions) == 2
 
     def test_close(self):
-        from programmaticmemory.benchmarks._pddl_wrapper import PDDLWrapper
+        from mstar.benchmarks._pddl_wrapper import PDDLWrapper
 
         mock_env = MagicMock()
         mock_state = MagicMock()
@@ -365,7 +365,7 @@ class TestPDDLWrapper:
         mock_pddlgym = MagicMock()
         mock_pddlgym.make.return_value = mock_env
         with patch(
-            "programmaticmemory.benchmarks._pddl_wrapper.pddlgym",
+            "mstar.benchmarks._pddl_wrapper.pddlgym",
             mock_pddlgym,
         ):
             wrapper = PDDLWrapper("PDDLEnvBlocks-v0", 0)
@@ -377,19 +377,19 @@ class TestPDDLWrapper:
 
 class TestLoadAgentboard:
     def test_category_required(self):
-        from programmaticmemory.benchmarks.agentboard import load_agentboard
+        from mstar.benchmarks.agentboard import load_agentboard
 
         with pytest.raises(ValueError, match="category"):
             load_agentboard(category=None)
 
     def test_invalid_category_raises(self):
-        from programmaticmemory.benchmarks.agentboard import load_agentboard
+        from mstar.benchmarks.agentboard import load_agentboard
 
         with pytest.raises(ValueError, match="category"):
             load_agentboard(category="nonexistent")
 
     def test_scienceworld_loads_with_mock(self):
-        from programmaticmemory.benchmarks.agentboard import load_agentboard
+        from mstar.benchmarks.agentboard import load_agentboard
 
         mock_env = MagicMock()
         mock_env.get_task_names.return_value = ["boil", "melt"]
@@ -398,7 +398,7 @@ class TestLoadAgentboard:
         mock_env.get_task_description.return_value = "Boil water in a pot."
 
         with patch(
-            "programmaticmemory.benchmarks.agentboard.ScienceWorldEnv",
+            "mstar.benchmarks.agentboard.ScienceWorldEnv",
             return_value=mock_env,
         ):
             ds = load_agentboard(category="scienceworld", num_train=2, num_val=2)
@@ -414,7 +414,7 @@ class TestLoadAgentboard:
             assert item.metadata["env"] == "scienceworld"
 
     def test_available_categories(self):
-        from programmaticmemory.benchmarks.agentboard import AVAILABLE_CATEGORIES
+        from mstar.benchmarks.agentboard import AVAILABLE_CATEGORIES
 
         assert "scienceworld" in AVAILABLE_CATEGORIES
         assert "babyai" in AVAILABLE_CATEGORIES
@@ -422,7 +422,7 @@ class TestLoadAgentboard:
 
     def test_pddl_loads_without_external_deps(self):
         """PDDL loader doesn't need pddlgym for data generation (unlike scienceworld/babyai)."""
-        from programmaticmemory.benchmarks.agentboard import load_agentboard
+        from mstar.benchmarks.agentboard import load_agentboard
 
         ds = load_agentboard(category="pddl", num_train=3, num_val=3)
         assert isinstance(ds, Dataset)
@@ -436,7 +436,7 @@ class TestLoadAgentboard:
 
 class TestAgentBoardValScorer:
     def test_score_batch_dispatches_episodes(self):
-        from programmaticmemory.benchmarks.agentboard import AgentBoardValScorer
+        from mstar.benchmarks.agentboard import AgentBoardValScorer
 
         scorer = AgentBoardValScorer(max_steps=30, max_workers=2)
         items = [
@@ -459,7 +459,7 @@ class TestAgentBoardValScorer:
 
         with (
             patch("concurrent.futures.ProcessPoolExecutor", concurrent.futures.ThreadPoolExecutor),
-            patch("programmaticmemory.benchmarks.agentboard._run_episode", return_value=("transcript", 0.75, "rationale")),
+            patch("mstar.benchmarks.agentboard._run_episode", return_value=("transcript", 0.75, "rationale")),
         ):
             results = scorer.score_batch(items, retrieved, "mock/model", "instruction", "")
 
@@ -467,7 +467,7 @@ class TestAgentBoardValScorer:
         assert all(score == 0.75 for _, score, _ in results)
 
     def test_score_batch_handles_failure(self):
-        from programmaticmemory.benchmarks.agentboard import AgentBoardValScorer
+        from mstar.benchmarks.agentboard import AgentBoardValScorer
 
         scorer = AgentBoardValScorer(max_steps=30)
         items = [
@@ -483,7 +483,7 @@ class TestAgentBoardValScorer:
 
         with (
             patch("concurrent.futures.ProcessPoolExecutor", concurrent.futures.ThreadPoolExecutor),
-            patch("programmaticmemory.benchmarks.agentboard._run_episode", side_effect=RuntimeError("crashed")),
+            patch("mstar.benchmarks.agentboard._run_episode", side_effect=RuntimeError("crashed")),
         ):
             results = scorer.score_batch(items, ["tips"], "mock/model", "instruction", "")
 
@@ -494,21 +494,21 @@ class TestAgentBoardValScorer:
 
 class TestAgentBoardActionSelection:
     def test_parse_action_exact_match(self):
-        from programmaticmemory.benchmarks.agentboard import _parse_action_response
+        from mstar.benchmarks.agentboard import _parse_action_response
 
         assert _parse_action_response("pick up thermometer", ["pick up thermometer", "look"]) == "pick up thermometer"
 
     def test_parse_action_case_insensitive(self):
-        from programmaticmemory.benchmarks.agentboard import _parse_action_response
+        from mstar.benchmarks.agentboard import _parse_action_response
 
         assert _parse_action_response("PICK UP THERMOMETER", ["pick up thermometer", "look"]) == "pick up thermometer"
 
     def test_parse_action_strips_prefix(self):
-        from programmaticmemory.benchmarks.agentboard import _parse_action_response
+        from mstar.benchmarks.agentboard import _parse_action_response
 
         assert _parse_action_response("Action: look", ["pick up thermometer", "look"]) == "look"
 
     def test_parse_action_fallback(self):
-        from programmaticmemory.benchmarks.agentboard import _parse_action_response
+        from mstar.benchmarks.agentboard import _parse_action_response
 
         assert _parse_action_response("random nonsense", ["pick up thermometer", "look"]) == "pick up thermometer"

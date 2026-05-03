@@ -17,7 +17,7 @@
 | File | Action | Responsibility |
 |------|--------|---------------|
 | `pyproject.toml` | Modify | Add `azure-identity` to dependencies |
-| `src/programmaticmemory/evolution/__main__.py` | Modify | Add `--azure-api-base`, `--azure-api-version` CLI flags; detect Azure models; set litellm globals |
+| `src/mstar/evolution/__main__.py` | Modify | Add `--azure-api-base`, `--azure-api-version` CLI flags; detect Azure models; set litellm globals |
 | `tests/evolution/test_azure_auth.py` | Create | Unit tests for Azure detection and litellm config |
 
 ---
@@ -95,7 +95,7 @@ def _configure_azure_auth(
     Sets litellm.enable_azure_ad_token_refresh = True when no AZURE_API_KEY
     is found in environment. Sets api_base and api_version globals.
     """
-    from programmaticmemory.evolution.azure_config import configure_azure_auth
+    from mstar.evolution.azure_config import configure_azure_auth
 
     configure_azure_auth(models, azure_api_base, azure_api_version)
 
@@ -179,7 +179,7 @@ class TestConfigureAzureAuth:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/evolution/test_azure_auth.py -v`
-Expected: FAIL — `programmaticmemory.evolution.azure_config` does not exist
+Expected: FAIL — `mstar.evolution.azure_config` does not exist
 
 - [ ] **Step 3: Commit failing tests**
 
@@ -193,7 +193,7 @@ git commit -m "test: add failing tests for Azure auth detection"
 ### Task 3: Implement Azure config module
 
 **Files:**
-- Create: `src/programmaticmemory/evolution/azure_config.py`
+- Create: `src/mstar/evolution/azure_config.py`
 
 - [ ] **Step 1: Create azure_config.py**
 
@@ -251,7 +251,7 @@ Expected: All 7 tests PASS
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/programmaticmemory/evolution/azure_config.py
+git add src/mstar/evolution/azure_config.py
 git commit -m "feat: add Azure auth config module with token provider support"
 ```
 
@@ -260,7 +260,7 @@ git commit -m "feat: add Azure auth config module with token provider support"
 ### Task 4: Wire Azure config into CLI
 
 **Files:**
-- Modify: `src/programmaticmemory/evolution/__main__.py:86-120` (argument parsing) and `:527-535` (startup logic)
+- Modify: `src/mstar/evolution/__main__.py:86-120` (argument parsing) and `:527-535` (startup logic)
 
 - [ ] **Step 1: Add CLI flags to argparse**
 
@@ -288,7 +288,7 @@ After `configure_cache("disk")` (around line 533), add:
 
 ```python
     # Configure Azure auth if any model uses azure/ prefix
-    from programmaticmemory.evolution.azure_config import configure_azure_auth
+    from mstar.evolution.azure_config import configure_azure_auth
 
     all_models = [args.task_model, args.reflect_model, args.toolkit_model, args.judge_model, args.embedding_model]
     configure_azure_auth(all_models, args.azure_api_base, args.azure_api_version)
@@ -309,7 +309,7 @@ Expected: No errors
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/programmaticmemory/evolution/__main__.py
+git add src/mstar/evolution/__main__.py
 git commit -m "feat: wire Azure auth CLI flags into evolution entry point"
 ```
 
@@ -331,12 +331,12 @@ After the existing CLI recipes section in `CLAUDE.md`, add documentation for Azu
 # With API key
 export AZURE_API_KEY=xxx
 export AZURE_API_BASE=https://myresource.openai.azure.com/
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset locomo --task-model azure/gpt-4o
 
 # With DefaultAzureCredential (az login, Managed Identity, etc.)
 az login
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset locomo --task-model azure/gpt-4o \
   --azure-api-base https://myresource.openai.azure.com/
 ```

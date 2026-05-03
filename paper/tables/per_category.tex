@@ -1,0 +1,35 @@
+% Table: Per-Category Breakdown (combined)
+\begin{table*}[t]
+    \centering
+    \small
+    \caption{\textbf{Per-category performance breakdown.}
+    \textbf{(a)}~ALFWorld Unseen success rate by task type.
+    \textbf{(b)}~LoCoMo token F1 by query type.
+    $n$ is the number of test episodes or test queries per category.
+    Min reports the minimum score across shown categories.
+    Best per column in \textbf{bold}.}
+    \vspace{-0.5em}
+    \label{tab:per-category}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}l ccccc c !{\vrule width 0.6pt} cccc c@{}}
+        \toprule
+        \rowcolor{gray!10}
+        & \multicolumn{6}{c!{\vrule width 0.6pt}}{\textbf{(a) ALFWorld Unseen}} & \multicolumn{5}{c}{\textbf{(b) LoCoMo}} \\
+        \cmidrule(r){2-7} \cmidrule(l){8-12}
+        \rowcolor{gray!10}
+        & \textbf{Simple} & \textbf{Clean} & \textbf{Cool} & \textbf{Heat} & \textbf{2-Obj} &
+        & \textbf{Single} & \textbf{Temp.} & \textbf{Causal} & \textbf{Open} & \\
+        \rowcolor{gray!10}
+        & \footnotesize$(n{=}8)$ & \footnotesize$(n{=}11)$ & \footnotesize$(n{=}7)$ & \footnotesize$(n{=}6)$ & \footnotesize$(n{=}8)$ & \textbf{Min}
+        & \footnotesize$(n{=}18)$ & \footnotesize$(n{=}18)$ & \footnotesize$(n{=}9)$ & \footnotesize$(n{=}55)$ & \textbf{Min} \\
+        \midrule
+        No Memory            & 0.88 & 0.82 & 0.57 & 0.83 & 0.62 & 0.57 & 0.02 & 0.00 & 0.11 & 0.04 & 0.00 \\
+        Mem0                 & 0.88 & 0.64 & 0.57 & \textbf{1.00} & 0.75 & 0.57 & \textbf{0.33} & 0.26 & 0.37 & 0.43 & 0.26 \\
+        Trajectory Retrieval & 0.75 & 0.73 & 0.71 & 0.67 & 0.75 & 0.67 & 0.18 & 0.33 & 0.34 & 0.28 & 0.18 \\
+        GEPA + Vector Search & 0.88 & \textbf{1.00} & 0.57 & \textbf{1.00} & 0.62 & 0.57 & 0.15 & \textbf{0.38} & \textbf{0.39} & 0.31 & 0.15 \\
+        \rowcolor{green!10}
+        \sysname{}      & 0.88 & 0.91 & \textbf{1.00} & 0.83 & 0.75 & \textbf{0.75} & \textbf{0.33} & 0.19 & 0.35 & \textbf{0.51} & 0.19 \\
+        \bottomrule
+    \end{tabular}}%
+    \vspace{-1em}
+\end{table*}

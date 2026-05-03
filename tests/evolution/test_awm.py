@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from programmaticmemory.baselines.awm import (
+from mstar.baselines.awm import (
     Trajectory,
     TrajectoryStep,
     Workflow,
@@ -173,7 +173,7 @@ class TestCosineSimilarity:
 
 
 class TestInduceWorkflowsFromTrajectory:
-    @patch("programmaticmemory.baselines.awm.litellm")
+    @patch("mstar.baselines.awm.litellm")
     def test_induction_with_no_existing_workflows(self, mock_litellm):
         mock_resp = MagicMock()
         mock_resp.choices = [MagicMock()]
@@ -200,7 +200,7 @@ class TestInduceWorkflowsFromTrajectory:
         prompt = call_args[1]["messages"][0]["content"]
         assert "Previously induced workflows" not in prompt
 
-    @patch("programmaticmemory.baselines.awm.litellm")
+    @patch("mstar.baselines.awm.litellm")
     def test_induction_with_existing_workflows_enables_composition(self, mock_litellm):
         mock_resp = MagicMock()
         mock_resp.choices = [MagicMock()]
@@ -223,7 +223,7 @@ class TestInduceWorkflowsFromTrajectory:
         assert "COMPOSE" in prompt
         assert len(workflows) == 1
 
-    @patch("programmaticmemory.baselines.awm.litellm")
+    @patch("mstar.baselines.awm.litellm")
     def test_empty_description_or_steps_filtered(self, mock_litellm):
         mock_resp = MagicMock()
         mock_resp.choices = [MagicMock()]
@@ -247,7 +247,7 @@ class TestInduceWorkflows:
         result = induce_workflows(trajs, model="test/model", min_progress=0.5)
         assert result == []
 
-    @patch("programmaticmemory.baselines.awm.litellm")
+    @patch("mstar.baselines.awm.litellm")
     def test_iterative_induction_passes_existing_as_context(self, mock_litellm):
         """Second trajectory's induction should see workflows from first."""
         call_count = [0]
@@ -282,7 +282,7 @@ class TestInduceWorkflows:
         second_call_prompt = mock_litellm.completion.call_args_list[1][1]["messages"][0]["content"]
         assert "basic nav" in second_call_prompt
 
-    @patch("programmaticmemory.baselines.awm.litellm")
+    @patch("mstar.baselines.awm.litellm")
     def test_deduplicates_by_description(self, mock_litellm):
         mock_resp = MagicMock()
         mock_resp.choices = [MagicMock()]
@@ -304,7 +304,7 @@ class TestInduceWorkflows:
 
 
 class TestRetrieveWorkflows:
-    @patch("programmaticmemory.baselines.awm.embed_texts")
+    @patch("mstar.baselines.awm.embed_texts")
     def test_retrieves_most_similar(self, mock_embed):
         w1 = _make_workflow(description="navigate to object")
         w1.embedding = [1.0, 0.0, 0.0]

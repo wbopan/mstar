@@ -1,0 +1,25 @@
+% Table 2: Ablation study on LoCoMo
+\begin{wraptable}{r}{0.44\textwidth}
+    % \vspace{-1.2em}
+    \centering
+    \footnotesize
+    \caption{\textbf{Ablation study on LoCoMo.}
+    Rows report the full system and variants that remove or alter one design choice; metric is token F1.
+    $\Delta$ reports absolute change from the full system.}
+    % \vspace{-0.5em}
+    \label{tab:ablation}
+    \begin{tabular}{@{}lcc@{}}
+        \toprule
+        \rowcolor{gray!10}
+        \textbf{Variant} & \textbf{F1} & \textbf{$\Delta$} \\
+        \midrule
+        \rowcolor{green!10}
+        \sysname{}                           & 0.459  & ---      \\
+        \quad $-$ Instruction                 & 0.353  & $-$0.106 \\
+        \quad $-$ Code                        & 0.256  & $-$0.203 \\
+        \quad Max parent selection          & 0.381  & $-$0.078 \\
+        \quad $-$ Diversity                   & 0.318  & $-$0.141 \\
+        \bottomrule
+    \end{tabular}%
+    \vspace{-1em}
+\end{wraptable}

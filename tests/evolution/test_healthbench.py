@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from programmaticmemory.benchmarks import healthbench as _healthbench
+from mstar.benchmarks import healthbench as _healthbench
 
 _HEALTHBENCH_FIXTURE = [
     {
@@ -73,12 +73,12 @@ def data_dir(tmp_path, monkeypatch):
 
 class TestHealthBench:
     def test_register(self):
-        from programmaticmemory.datasets import list_datasets
+        from mstar.datasets import list_datasets
 
         assert "healthbench" in list_datasets()
 
     def test_load_returns_dataset(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("healthbench", data_dir=data_dir)
         assert len(ds.train) > 0
@@ -86,14 +86,14 @@ class TestHealthBench:
         assert ds.val_scorer is not None
 
     def test_train_has_raw_text(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("healthbench", data_dir=data_dir)
         for item in ds.train:
             assert item.raw_text
 
     def test_val_has_rubric_in_metadata(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("healthbench", data_dir=data_dir)
         for item in ds.val:
@@ -103,7 +103,7 @@ class TestHealthBench:
             assert isinstance(rubric, list)
 
     def test_category_filter(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("healthbench", data_dir=data_dir, category="emergency_referrals")
         assert len(ds.val) > 0

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from programmaticmemory.evolution.__main__ import split_val_test
-from programmaticmemory.evolution.types import DataItem, Dataset
+from mstar.evolution.__main__ import split_val_test
+from mstar.evolution.types import DataItem, Dataset
 
 
 def _make_items(n: int) -> list[DataItem]:
@@ -85,7 +85,6 @@ class TestSplitValTest:
             split_val_test(ds, test_size=-2, seed=42)
 
 
-
 class TestLoopTestEval:
     """Tests for two-stage test evaluation in the evolution loop."""
 
@@ -93,8 +92,8 @@ class TestLoopTestEval:
         """When test_eval_data returns data, the best program is evaluated on it."""
         from unittest.mock import MagicMock
 
-        from programmaticmemory.evolution.loop import EvolutionLoop
-        from programmaticmemory.evolution.types import EvalResult
+        from mstar.evolution.loop import EvolutionLoop
+        from mstar.evolution.types import EvalResult
 
         train = _make_items(3)
         val = _make_items(5)
@@ -146,8 +145,8 @@ class TestLoopTestEval:
         """When test_eval_data returns None, no test evaluation happens."""
         from unittest.mock import MagicMock
 
-        from programmaticmemory.evolution.loop import EvolutionLoop
-        from programmaticmemory.evolution.types import EvalResult
+        from mstar.evolution.loop import EvolutionLoop
+        from mstar.evolution.types import EvalResult
 
         ds = Dataset(train=_make_items(3), val=_make_items(5), test=[])
 
@@ -185,8 +184,8 @@ class TestLoopTestEval:
         """When final_scores exist, test eval picks the best from final_scores."""
         from unittest.mock import MagicMock
 
-        from programmaticmemory.evolution.loop import EvolutionLoop
-        from programmaticmemory.evolution.types import EvalResult, KBProgram
+        from mstar.evolution.loop import EvolutionLoop
+        from mstar.evolution.types import EvalResult, KBProgram
 
         train = _make_items(3)
         val = _make_items(5)

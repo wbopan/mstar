@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from programmaticmemory.benchmarks.kv_memory import load_kv_memory
-from programmaticmemory.evolution.types import DataItem, Dataset
+from mstar.benchmarks.kv_memory import load_kv_memory
+from mstar.evolution.types import DataItem, Dataset
 
 
 class TestKVMemoryBenchmark:
@@ -125,7 +125,7 @@ class TestLoComoBenchmark:
         return tmp_path
 
     def test_train_has_sessions(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(data_dir=locomo_data_dir)
         assert isinstance(ds, Dataset)
@@ -140,7 +140,7 @@ class TestLoComoBenchmark:
         assert "Charlie: Diana, did you see the game?" in all_text
 
     def test_val_has_qa_pairs(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(data_dir=locomo_data_dir)
         assert len(ds.val) == 3  # 2 from conv1 (cat 1,3) + 1 from conv2 (cat 1)
@@ -149,14 +149,14 @@ class TestLoComoBenchmark:
         assert "Who won the game?" in questions
 
     def test_category_5_excluded(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(data_dir=locomo_data_dir)
         questions = [v.question for v in ds.val]
         assert "Obscure meta question" not in questions
 
     def test_category_filter(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(data_dir=locomo_data_dir, categories=(1,))
         assert len(ds.val) == 2  # 1 from conv1 (cat 1) + 1 from conv2 (cat 1)
@@ -165,7 +165,7 @@ class TestLoComoBenchmark:
         assert "Who won the game?" in questions
 
     def test_deterministic_with_seed(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         d1 = load_locomo(data_dir=locomo_data_dir, seed=42)
         d2 = load_locomo(data_dir=locomo_data_dir, seed=42)
@@ -173,13 +173,13 @@ class TestLoComoBenchmark:
         assert [i.question for i in d1.val] == [i.question for i in d2.val]
 
     def test_test_set_empty(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(data_dir=locomo_data_dir)
         assert ds.test == []
 
     def test_category_filters_to_single_conversation(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds_all = load_locomo(data_dir=locomo_data_dir, category=None)
         ds_cat0 = load_locomo(data_dir=locomo_data_dir, category="0")
@@ -189,19 +189,19 @@ class TestLoComoBenchmark:
         assert len(ds_cat0.val) > 0
 
     def test_category_out_of_range_raises(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         with pytest.raises(ValueError, match="category"):
             load_locomo(data_dir=locomo_data_dir, category="99")
 
     def test_category_non_integer_raises(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         with pytest.raises(ValueError, match="conversation index"):
             load_locomo(data_dir=locomo_data_dir, category="abc")
 
     def test_category_none_returns_all(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(data_dir=locomo_data_dir, category=None)
         assert len(ds.train) == 3  # 2 sessions from conv1 + 1 from conv2
@@ -220,7 +220,7 @@ class TestMiniLoComoBenchmark:
         return tmp_path
 
     def test_category_rejects_non_none(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.mini_locomo import load_mini_locomo
+        from mstar.benchmarks.mini_locomo import load_mini_locomo
 
         with pytest.raises(ValueError, match="category"):
             load_mini_locomo(data_dir=locomo_data_dir, category="something")
@@ -261,7 +261,7 @@ class TestTauBenchBenchmark:
         return tmp_path
 
     def test_loads_correct_count(self, tau_data_dir):
-        from programmaticmemory.benchmarks.tau_bench import load_tau_bench
+        from mstar.benchmarks.tau_bench import load_tau_bench
 
         ds = load_tau_bench(data_dir=tau_data_dir, train_ratio=0.7)
         assert isinstance(ds, Dataset)
@@ -269,26 +269,26 @@ class TestTauBenchBenchmark:
         assert len(ds.test) == 0
 
     def test_expected_from_outputs(self, tau_data_dir):
-        from programmaticmemory.benchmarks.tau_bench import _derive_expected
+        from mstar.benchmarks.tau_bench import _derive_expected
 
         task = {"outputs": ["Order 12345 is currently being shipped"], "actions": []}
         assert _derive_expected(task) == "Order 12345 is currently being shipped"
 
     def test_expected_from_last_action(self, tau_data_dir):
-        from programmaticmemory.benchmarks.tau_bench import _derive_expected
+        from mstar.benchmarks.tau_bench import _derive_expected
 
         task = {"outputs": [], "actions": [{"name": "cancel_order"}]}
         assert _derive_expected(task) == "cancel_order"
 
     def test_raw_text_empty(self, tau_data_dir):
-        from programmaticmemory.benchmarks.tau_bench import load_tau_bench
+        from mstar.benchmarks.tau_bench import load_tau_bench
 
         ds = load_tau_bench(data_dir=tau_data_dir)
         for item in ds.train + ds.val:
             assert item.raw_text == ""
 
     def test_train_val_non_overlapping(self, tau_data_dir):
-        from programmaticmemory.benchmarks.tau_bench import load_tau_bench
+        from mstar.benchmarks.tau_bench import load_tau_bench
 
         ds = load_tau_bench(data_dir=tau_data_dir)
         train_q = {i.question for i in ds.train}
@@ -296,13 +296,13 @@ class TestTauBenchBenchmark:
         assert train_q.isdisjoint(val_q)
 
     def test_category_rejects_non_none(self, tau_data_dir):
-        from programmaticmemory.benchmarks.tau_bench import load_tau_bench
+        from mstar.benchmarks.tau_bench import load_tau_bench
 
         with pytest.raises(ValueError, match="category"):
             load_tau_bench(data_dir=tau_data_dir, category="something")
 
     def test_deterministic_with_seed(self, tau_data_dir):
-        from programmaticmemory.benchmarks.tau_bench import load_tau_bench
+        from mstar.benchmarks.tau_bench import load_tau_bench
 
         d1 = load_tau_bench(data_dir=tau_data_dir, seed=42)
         d2 = load_tau_bench(data_dir=tau_data_dir, seed=42)
@@ -393,7 +393,7 @@ def _make_alfworld_fixture(tmp_path: Path) -> Path:
 
 class TestALFWorldTrainingText:
     def test_format_training_text_includes_task_info(self):
-        from programmaticmemory.benchmarks.alfworld import _format_training_text
+        from mstar.benchmarks.alfworld import _format_training_text
 
         text = _format_training_text(
             "Put a hot mug in the cabinet.",
@@ -404,7 +404,7 @@ class TestALFWorldTrainingText:
         assert "pick_heat" in text
 
     def test_format_training_text_includes_pddl_params(self):
-        from programmaticmemory.benchmarks.alfworld import _format_training_text
+        from mstar.benchmarks.alfworld import _format_training_text
 
         text = _format_training_text(
             "Heat the egg.",
@@ -415,7 +415,7 @@ class TestALFWorldTrainingText:
         assert "egg" in text
 
     def test_format_training_text_includes_scene(self):
-        from programmaticmemory.benchmarks.alfworld import _format_training_text
+        from mstar.benchmarks.alfworld import _format_training_text
 
         text = _format_training_text(
             "Cool the apple.",
@@ -425,7 +425,7 @@ class TestALFWorldTrainingText:
         assert "FloorPlan7" in text
 
     def test_format_training_text_no_pddl(self):
-        from programmaticmemory.benchmarks.alfworld import _format_training_text
+        from mstar.benchmarks.alfworld import _format_training_text
 
         text = _format_training_text("Look at book under light.", "look_at_obj_in_light", {})
         assert "look_at_obj_in_light" in text
@@ -436,10 +436,10 @@ class TestALFWorldBenchmark:
     @pytest.fixture(autouse=True)
     def _skip_game_probe(self):
         """Fixture game files are stubs — skip real TextWorld probing."""
-        import programmaticmemory.benchmarks.alfworld as _aw
+        import mstar.benchmarks.alfworld as _aw
 
         _aw._VALID_GAME_CACHE.clear()
-        with patch("programmaticmemory.benchmarks.alfworld._probe_game_isolated", return_value=True):
+        with patch("mstar.benchmarks.alfworld._probe_game_isolated", return_value=True):
             yield
         _aw._VALID_GAME_CACHE.clear()
 
@@ -448,7 +448,7 @@ class TestALFWorldBenchmark:
         return _make_alfworld_fixture(tmp_path)
 
     def test_unsolvable_filtered_out(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import _parse_trials
+        from mstar.benchmarks.alfworld import _parse_trials
 
         base = alfworld_data_dir / "alfworld" / "json_2.1.1" / "valid_unseen"
         typed_items = _parse_trials(base, for_train=False)
@@ -458,7 +458,7 @@ class TestALFWorldBenchmark:
         assert "Clean the cup." not in questions
 
     def test_loads_solvable_tasks(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         ds = load_alfworld(num_train=2, data_dir=alfworld_data_dir)
         assert isinstance(ds, Dataset)
@@ -467,7 +467,7 @@ class TestALFWorldBenchmark:
         assert len(ds.test) == 0
 
     def test_train_items_have_raw_text(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         ds = load_alfworld(num_train=2, data_dir=alfworld_data_dir)
         for item in ds.train:
@@ -476,7 +476,7 @@ class TestALFWorldBenchmark:
             assert item.expected_answer == ""
 
     def test_val_items_have_metadata(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         ds = load_alfworld(num_train=2, data_dir=alfworld_data_dir)
         for item in ds.val:
@@ -487,7 +487,7 @@ class TestALFWorldBenchmark:
             assert "task_type" in item.metadata
 
     def test_deterministic_with_seed(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         d1 = load_alfworld(num_train=2, data_dir=alfworld_data_dir, seed=42)
         d2 = load_alfworld(num_train=2, data_dir=alfworld_data_dir, seed=42)
@@ -495,7 +495,7 @@ class TestALFWorldBenchmark:
         assert [i.question for i in d1.val] == [i.question for i in d2.val]
 
     def test_category_filters_by_task_type(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         ds = load_alfworld(num_train=1, data_dir=alfworld_data_dir, category="heat")
         # Should only have heat tasks
@@ -503,13 +503,13 @@ class TestALFWorldBenchmark:
             assert item.metadata["task_type"] == "heat"
 
     def test_category_none_returns_all(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         ds = load_alfworld(num_train=2, data_dir=alfworld_data_dir, category=None)
         assert len(ds.train) + len(ds.val) > 0
 
     def test_category_no_match_raises(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         with pytest.raises(ValueError, match="category"):
             load_alfworld(num_train=1, data_dir=alfworld_data_dir, category="nonexistent")
@@ -519,7 +519,7 @@ class TestALFWorldBenchmark:
         import sys
         import unittest.mock
 
-        from programmaticmemory.benchmarks.alfworld import ALFWorldValScorer, load_alfworld
+        from mstar.benchmarks.alfworld import ALFWorldValScorer, load_alfworld
 
         mock_alfworld = MagicMock()
         with unittest.mock.patch.dict(sys.modules, {"alfworld": mock_alfworld}):
@@ -531,7 +531,7 @@ class TestALFWorldBenchmark:
         import sys
         import unittest.mock
 
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         # Simulate alfworld not being installed
         with unittest.mock.patch.dict(sys.modules, {"alfworld": None}):
@@ -541,7 +541,7 @@ class TestALFWorldBenchmark:
         assert ds.compare_fn is not None
 
     def test_available_categories(self, alfworld_data_dir):
-        from programmaticmemory.benchmarks.alfworld import load_alfworld
+        from mstar.benchmarks.alfworld import load_alfworld
 
         ds = load_alfworld(num_train=2, data_dir=alfworld_data_dir)
         assert ds.available_categories is not None
@@ -563,7 +563,7 @@ class TestALFWorldValScorer:
     )
     def test_run_episode_success(self):
         """_run_episode returns score 1.0 when episode completes with reward."""
-        from programmaticmemory.benchmarks.alfworld import _run_episode
+        from mstar.benchmarks.alfworld import _run_episode
 
         class MockEnv:
             def __init__(self):
@@ -590,7 +590,7 @@ class TestALFWorldValScorer:
         with (
             patch("textworld.gym.register_games", return_value="fake-env-id"),
             patch("textworld.gym.make", return_value=mock_env),
-            patch("programmaticmemory.benchmarks.alfworld._select_action", side_effect=["go to desk 1", "take lamp"]),
+            patch("mstar.benchmarks.alfworld._select_action", side_effect=["go to desk 1", "take lamp"]),
         ):
             transcript, score, rationale = _run_episode("/fake/game.tw-pddl", "Find lamp", "tips", "mock/model", 50)
 
@@ -603,7 +603,7 @@ class TestALFWorldValScorer:
     )
     def test_run_episode_failure_returns_zero(self):
         """_run_episode returns score 0.0 when max_steps exhausted."""
-        from programmaticmemory.benchmarks.alfworld import _run_episode
+        from mstar.benchmarks.alfworld import _run_episode
 
         class NeverDoneEnv:
             def reset(self):
@@ -618,7 +618,7 @@ class TestALFWorldValScorer:
         with (
             patch("textworld.gym.register_games", return_value="fake-env-id"),
             patch("textworld.gym.make", return_value=NeverDoneEnv()),
-            patch("programmaticmemory.benchmarks.alfworld._select_action", return_value="look"),
+            patch("mstar.benchmarks.alfworld._select_action", return_value="look"),
         ):
             _transcript, score, rationale = _run_episode("/fake/game.tw-pddl", "Do something", "tips", "mock/model", 3)
 
@@ -626,9 +626,9 @@ class TestALFWorldValScorer:
 
     def test_select_action_exact_match(self):
         """_select_action matches LLM output against admissible commands."""
-        from programmaticmemory.benchmarks.alfworld import _select_action
+        from mstar.benchmarks.alfworld import _select_action
 
-        with patch("programmaticmemory.benchmarks.alfworld.completion_with_retry") as mock_litellm:
+        with patch("mstar.benchmarks.alfworld.completion_with_retry") as mock_litellm:
             mock_resp = MagicMock()
             mock_resp.choices = [MagicMock()]
             mock_resp.choices[0].message.content = "take lamp 1"
@@ -639,9 +639,9 @@ class TestALFWorldValScorer:
 
     def test_select_action_substring_fallback(self):
         """Falls back to substring match when exact match fails."""
-        from programmaticmemory.benchmarks.alfworld import _select_action
+        from mstar.benchmarks.alfworld import _select_action
 
-        with patch("programmaticmemory.benchmarks.alfworld.completion_with_retry") as mock_litellm:
+        with patch("mstar.benchmarks.alfworld.completion_with_retry") as mock_litellm:
             mock_resp = MagicMock()
             mock_resp.choices = [MagicMock()]
             mock_resp.choices[0].message.content = "I'll take lamp 1 from the desk"
@@ -652,9 +652,9 @@ class TestALFWorldValScorer:
 
     def test_select_action_fallback_to_first(self):
         """Falls back to first admissible when no match found."""
-        from programmaticmemory.benchmarks.alfworld import _select_action
+        from mstar.benchmarks.alfworld import _select_action
 
-        with patch("programmaticmemory.benchmarks.alfworld.completion_with_retry") as mock_litellm:
+        with patch("mstar.benchmarks.alfworld.completion_with_retry") as mock_litellm:
             mock_resp = MagicMock()
             mock_resp.choices = [MagicMock()]
             mock_resp.choices[0].message.content = "something completely unrelated"
@@ -665,7 +665,7 @@ class TestALFWorldValScorer:
 
     def test_parse_action_response_strips_prefix(self):
         """_parse_action_response handles 'Action:' prefixes and case-insensitive matching."""
-        from programmaticmemory.benchmarks.alfworld import _parse_action_response
+        from mstar.benchmarks.alfworld import _parse_action_response
 
         assert _parse_action_response("Action: go to desk 1", ["go to desk 1", "look"]) == "go to desk 1"
         assert _parse_action_response("GO TO DESK 1", ["go to desk 1", "look"]) == "go to desk 1"
@@ -678,7 +678,7 @@ class TestALFWorldValScorer:
         ProcessPoolExecutor child processes don't see in-process mocks, so we
         mock both the executor (to run synchronously in-process) and _run_episode.
         """
-        from programmaticmemory.benchmarks.alfworld import ALFWorldValScorer
+        from mstar.benchmarks.alfworld import ALFWorldValScorer
 
         scorer = ALFWorldValScorer(max_steps=50, max_workers=2)
         items = [
@@ -696,9 +696,7 @@ class TestALFWorldValScorer:
 
         with (
             patch("concurrent.futures.ProcessPoolExecutor", _FakeProcessPool),
-            patch(
-                "programmaticmemory.benchmarks.alfworld._run_episode", return_value=("transcript", 1.0, "rationale")
-            ) as mock_run,
+            patch("mstar.benchmarks.alfworld._run_episode", return_value=("transcript", 1.0, "rationale")) as mock_run,
         ):
             results = scorer.score_batch(items, retrieved, "mock/model", "instruction", "")
 
@@ -708,7 +706,7 @@ class TestALFWorldValScorer:
 
     def test_score_batch_handles_episode_failure(self):
         """score_batch returns zero score for episodes that raise exceptions."""
-        from programmaticmemory.benchmarks.alfworld import ALFWorldValScorer
+        from mstar.benchmarks.alfworld import ALFWorldValScorer
 
         scorer = ALFWorldValScorer(max_steps=50, max_workers=2)
         items = [
@@ -724,7 +722,7 @@ class TestALFWorldValScorer:
 
         with (
             patch("concurrent.futures.ProcessPoolExecutor", _FakeProcessPool),
-            patch("programmaticmemory.benchmarks.alfworld._run_episode", side_effect=RuntimeError("env crashed")),
+            patch("mstar.benchmarks.alfworld._run_episode", side_effect=RuntimeError("env crashed")),
         ):
             results = scorer.score_batch(items, retrieved, "mock/model", "instruction", "")
 
@@ -838,7 +836,7 @@ class TestNYTConnectionsBenchmark:
         return tmp_path
 
     def test_loads_correct_count(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         ds = load_nyt_connections(data_dir=nyt_data_dir, train_ratio=0.5)
         assert isinstance(ds, Dataset)
@@ -846,14 +844,14 @@ class TestNYTConnectionsBenchmark:
         assert len(ds.test) == 0
 
     def test_raw_text_empty(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         ds = load_nyt_connections(data_dir=nyt_data_dir)
         for item in ds.train + ds.val:
             assert item.raw_text == ""
 
     def test_question_contains_task_description(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         ds = load_nyt_connections(data_dir=nyt_data_dir)
         for item in ds.train + ds.val:
@@ -862,7 +860,7 @@ class TestNYTConnectionsBenchmark:
             assert "four groups" in item.question
 
     def test_question_contains_16_words(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         ds = load_nyt_connections(data_dir=nyt_data_dir)
         for item in ds.train + ds.val:
@@ -871,7 +869,7 @@ class TestNYTConnectionsBenchmark:
             assert len(words) == 16
 
     def test_expected_answer_has_4_groups(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         ds = load_nyt_connections(data_dir=nyt_data_dir)
         for item in ds.train + ds.val:
@@ -882,7 +880,7 @@ class TestNYTConnectionsBenchmark:
                 assert len(words) == 4
 
     def test_words_are_shuffled_deterministically(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         d1 = load_nyt_connections(data_dir=nyt_data_dir, seed=42)
         d2 = load_nyt_connections(data_dir=nyt_data_dir, seed=42)
@@ -890,7 +888,7 @@ class TestNYTConnectionsBenchmark:
             assert a.question == b.question
 
     def test_different_seed_gives_different_order(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         d1 = load_nyt_connections(data_dir=nyt_data_dir, seed=42)
         d2 = load_nyt_connections(data_dir=nyt_data_dir, seed=99)
@@ -899,7 +897,7 @@ class TestNYTConnectionsBenchmark:
         assert q1 != q2
 
     def test_train_val_non_overlapping(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         ds = load_nyt_connections(data_dir=nyt_data_dir)
         train_q = {i.question for i in ds.train}
@@ -907,13 +905,13 @@ class TestNYTConnectionsBenchmark:
         assert train_q.isdisjoint(val_q)
 
     def test_category_rejects_non_none(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import load_nyt_connections
+        from mstar.benchmarks.nyt_connections import load_nyt_connections
 
         with pytest.raises(ValueError, match="category"):
             load_nyt_connections(data_dir=nyt_data_dir, category="something")
 
     def test_scorer_is_connections_scorer(self, nyt_data_dir):
-        from programmaticmemory.benchmarks.nyt_connections import ConnectionsScorer, load_nyt_connections
+        from mstar.benchmarks.nyt_connections import ConnectionsScorer, load_nyt_connections
 
         ds = load_nyt_connections(data_dir=nyt_data_dir)
         assert isinstance(ds.compare_fn, ConnectionsScorer)
@@ -927,7 +925,7 @@ class TestLoadDatasetCategory:
         """Category param is forwarded to the benchmark loader."""
         from unittest.mock import MagicMock
 
-        from programmaticmemory.datasets import _CUSTOM_REGISTRY, load_dataset
+        from mstar.datasets import _CUSTOM_REGISTRY, load_dataset
 
         mock_loader = MagicMock(return_value=Dataset(train=[], val=[], test=[]))
         _CUSTOM_REGISTRY["_test_cat"] = mock_loader
@@ -941,7 +939,7 @@ class TestLoadDatasetCategory:
         """When category is None, it is still forwarded (loaders handle the default)."""
         from unittest.mock import MagicMock
 
-        from programmaticmemory.datasets import _CUSTOM_REGISTRY, load_dataset
+        from mstar.datasets import _CUSTOM_REGISTRY, load_dataset
 
         mock_loader = MagicMock(return_value=Dataset(train=[], val=[], test=[]))
         _CUSTOM_REGISTRY["_test_cat2"] = mock_loader
@@ -964,7 +962,7 @@ class TestCategoryMetadata:
         return tmp_path
 
     def test_locomo_val_items_have_qa_category(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(num_conversations=1, data_dir=locomo_data_dir)
         for item in ds.val:
@@ -972,7 +970,7 @@ class TestCategoryMetadata:
             assert item.metadata["qa_category"] in {1, 2, 3, 4}
 
     def test_dataset_category_key(self, locomo_data_dir):
-        from programmaticmemory.benchmarks.locomo import load_locomo
+        from mstar.benchmarks.locomo import load_locomo
 
         ds = load_locomo(data_dir=locomo_data_dir)
         assert ds.category_key == "qa_category"

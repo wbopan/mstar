@@ -2,7 +2,7 @@
 
 import pytest
 
-from programmaticmemory.evolution.toolkit import (
+from mstar.evolution.toolkit import (
     MemoryLogger,
     Toolkit,
     ToolkitConfig,

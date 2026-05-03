@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from programmaticmemory.evolution.evaluator import (
+from mstar.evolution.evaluator import (
     ExactMatchScorer,
     LLMJudgeScorer,
     MemoryEvaluator,
@@ -24,9 +24,9 @@ from programmaticmemory.evolution.evaluator import (
     _guarded_write,
     _parse_json_from_llm,
 )
-from programmaticmemory.evolution.prompts import INITIAL_KB_PROGRAM
-from programmaticmemory.evolution.toolkit import ToolkitConfig
-from programmaticmemory.evolution.types import DataItem, KBProgram
+from mstar.evolution.prompts import INITIAL_KB_PROGRAM
+from mstar.evolution.toolkit import ToolkitConfig
+from mstar.evolution.types import DataItem, KBProgram
 
 _TEST_TOOLKIT_CONFIG = ToolkitConfig(llm_model="test/model")
 
@@ -77,7 +77,7 @@ class TestExactMatchScorer:
 
 
 class TestLLMJudgeScorer:
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_sends_system_and_user_message(self, mock_litellm):
         """LLMJudgeScorer sends a minimal system message followed by the user prompt."""
         mock_resp = MagicMock()
@@ -127,7 +127,7 @@ class TestRubricValScorer:
         assert _calculate_rubric_score([{"criterion": "A", "points": -4}], [True]) == 0.0
 
     @pytest.mark.llm
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_grade_single_criterion(self, mock_litellm):
         mock_resp = MagicMock()
         mock_resp.choices = [MagicMock()]
@@ -232,8 +232,8 @@ def _make_batch_mock(response_batches: list[list[str]]):
 class TestMemoryLifecycle:
     def test_initial_program_instantiates(self):
         """Initial memory program template can be instantiated."""
-        from programmaticmemory.evolution.sandbox import CompiledProgram, compile_kb_program
-        from programmaticmemory.evolution.toolkit import Toolkit, ToolkitConfig
+        from mstar.evolution.sandbox import CompiledProgram, compile_kb_program
+        from mstar.evolution.toolkit import Toolkit, ToolkitConfig
 
         result = compile_kb_program(INITIAL_KB_PROGRAM)
         assert isinstance(result, CompiledProgram)
@@ -244,8 +244,8 @@ class TestMemoryLifecycle:
 
     def test_write_then_read_returns_content(self):
         """Write followed by read should return the written content."""
-        from programmaticmemory.evolution.sandbox import CompiledProgram, compile_kb_program
-        from programmaticmemory.evolution.toolkit import Toolkit, ToolkitConfig
+        from mstar.evolution.sandbox import CompiledProgram, compile_kb_program
+        from mstar.evolution.toolkit import Toolkit, ToolkitConfig
 
         result = compile_kb_program(INITIAL_KB_PROGRAM)
         assert isinstance(result, CompiledProgram)
@@ -258,8 +258,8 @@ class TestMemoryLifecycle:
 
     def test_reinstantiation_gives_empty_memory(self):
         """Re-instantiating Memory should produce an empty store (no state leak)."""
-        from programmaticmemory.evolution.sandbox import CompiledProgram, compile_kb_program
-        from programmaticmemory.evolution.toolkit import Toolkit, ToolkitConfig
+        from mstar.evolution.sandbox import CompiledProgram, compile_kb_program
+        from mstar.evolution.toolkit import Toolkit, ToolkitConfig
 
         result = compile_kb_program(INITIAL_KB_PROGRAM)
         assert isinstance(result, CompiledProgram)
@@ -282,7 +282,7 @@ class TestMemoryLifecycle:
 
 
 class TestMemoryEvaluatorOffline:
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_basic_offline_evaluation(self, mock_litellm, snapshot: SnapshotAssertion):
         """Offline: batch ingest → query → answer → score."""
         batch_mock = _make_batch_mock(
@@ -315,7 +315,7 @@ class TestMemoryEvaluatorOffline:
         assert result.failed_cases == []
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_offline_wrong_answer(self, mock_litellm, snapshot: SnapshotAssertion):
         batch_mock = _make_batch_mock(
             [
@@ -349,7 +349,7 @@ class TestMemoryEvaluatorOffline:
         assert result.score == 0.0
         assert any("Compile error" in log for log in result.logs)
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_offline_val_uses_multiturn(self, mock_litellm, snapshot: SnapshotAssertion):
         """Val uses exactly 2 batch_completion rounds with multi-turn messages."""
         batch_mock = _make_batch_mock(
@@ -410,7 +410,7 @@ class KnowledgeBase:
         return " ".join(self.store) if self.store else "No information stored."
 """
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_always_on_knowledge_in_retrieved_memory(self, mock_litellm, snapshot: SnapshotAssertion):
         """Non-empty ALWAYS_ON_KNOWLEDGE should appear inside <retrieved_memory> tags."""
         batch_mock = _make_batch_mock(
@@ -448,7 +448,7 @@ class KnowledgeBase:
 
 
 class TestMemoryEvaluatorOnline:
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_online_train_messages_accumulate(self, mock_litellm, snapshot: SnapshotAssertion):
         """Online train: 3 batch rounds for train + 2 for val, messages grow across rounds."""
         batch_mock = _make_batch_mock(
@@ -487,7 +487,7 @@ class TestMemoryEvaluatorOnline:
         assert result.score == 1.0
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_online_step1_output_parses_to_query(self, mock_litellm, snapshot: SnapshotAssertion):
         """Step 1 mock output should be parseable into a Query dataclass."""
         batch_mock = _make_batch_mock(
@@ -512,7 +512,7 @@ class TestMemoryEvaluatorOnline:
         assert not any("query parse failed" in log for log in result.logs)
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_online_step3_output_parses_to_knowledge_item(self, mock_litellm, snapshot: SnapshotAssertion):
         """Step 3 mock output should be parseable into a KnowledgeItem dataclass."""
         batch_mock = _make_batch_mock(
@@ -536,7 +536,7 @@ class TestMemoryEvaluatorOnline:
         assert not any("knowledge item parse failed" in log for log in result.logs)
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_online_write_called_and_memory_updates(self, mock_litellm, snapshot: SnapshotAssertion):
         """After Step 3+4, memory.write should be called and memory state should update."""
         batch_mock = _make_batch_mock(
@@ -560,7 +560,7 @@ class TestMemoryEvaluatorOnline:
         assert result.score == 1.0
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_online_step3_includes_feedback_and_ground_truth(self, mock_litellm, snapshot: SnapshotAssertion):
         """Step 3 prompt must include evaluation result and ground truth."""
         batch_mock = _make_batch_mock(
@@ -594,7 +594,7 @@ class TestMemoryEvaluatorOnline:
 
 
 class TestValidationPipeline:
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_val_only_step1_and_step2(self, mock_litellm, snapshot: SnapshotAssertion):
         """Validation should only do Step 1 (query gen) + Step 2 (answer), no Step 3/4."""
         batch_mock = _make_batch_mock(
@@ -617,7 +617,7 @@ class TestValidationPipeline:
         assert len(batch_mock.captured_calls) == 3
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_val_does_not_call_write(self, mock_litellm, snapshot: SnapshotAssertion):
         """memory.write must NOT be called during validation phase."""
         batch_mock = _make_batch_mock(
@@ -673,7 +673,7 @@ class KnowledgeBase:
         assert len(batch_mock.captured_calls) == 5
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_val_conversation_history_in_failed_cases(self, mock_litellm, snapshot: SnapshotAssertion):
         """Failed cases should include the full multi-turn conversation history."""
         batch_mock = _make_batch_mock(
@@ -700,7 +700,7 @@ class KnowledgeBase:
         assert roles == ["user", "assistant", "user", "assistant"]
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_val_multiturn_messages_structure(self, mock_litellm, snapshot: SnapshotAssertion):
         """Val round 2 batch call should contain multi-turn messages per item."""
         batch_mock = _make_batch_mock(
@@ -733,7 +733,7 @@ class KnowledgeBase:
 
 
 class TestEvaluatorEdgeCases:
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_knowledge_item_generation_failure_skips_item(self, mock_litellm, snapshot: SnapshotAssertion):
         """Offline: if knowledge item generation fails (bad JSON), item is skipped but eval continues."""
         batch_mock = _make_batch_mock(
@@ -756,7 +756,7 @@ class TestEvaluatorEdgeCases:
         assert len(result.per_case_scores) == 1
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_query_generation_failure_scores_zero(self, mock_litellm, snapshot: SnapshotAssertion):
         """If query generation fails during val, that item scores 0."""
         batch_mock = _make_batch_mock(
@@ -779,7 +779,7 @@ class TestEvaluatorEdgeCases:
         assert len(result.failed_cases) == 1
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_answer_none_includes_retrieval_conversation(self, mock_litellm):
         """Failure to produce a val answer keeps retrieval-only conversation history."""
         responses = [
@@ -813,7 +813,7 @@ class TestEvaluatorEdgeCases:
         """Empty val data should return score 0 without crashing."""
         program = KBProgram(source_code=INITIAL_KB_PROGRAM)
         evaluator = MemoryEvaluator(task_model="mock/model", toolkit_config=_TEST_TOOLKIT_CONFIG)
-        with patch("programmaticmemory.evolution.evaluator.completion_with_retry") as mock_litellm:
+        with patch("mstar.evolution.evaluator.completion_with_retry") as mock_litellm:
             batch_mock = _make_batch_mock(
                 [
                     ['{"summary": "x"}'],  # train ki
@@ -828,7 +828,7 @@ class TestEvaluatorEdgeCases:
         assert result.score == 0.0
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_success_cases_collected(self, mock_litellm, snapshot: SnapshotAssertion):
         """Correct answers should be collected as success_cases."""
         batch_mock = _make_batch_mock(
@@ -858,7 +858,7 @@ class TestEvaluatorEdgeCases:
         assert result.failed_cases[0].question == "Q2?"
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_multiple_val_items(self, mock_litellm, snapshot: SnapshotAssertion):
         batch_mock = _make_batch_mock(
             [
@@ -887,7 +887,7 @@ class TestEvaluatorEdgeCases:
         assert len(result.failed_cases) == 1
         assert batch_mock.captured_calls == snapshot
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_offline_train_exception_in_batch_skips_item(self, mock_litellm):
         """If one completion call raises, that item is skipped gracefully."""
         import threading
@@ -1015,7 +1015,7 @@ OVERSIZED_READ_PROGRAM = textwrap.dedent("""\
 
 
 class TestRuntimeViolationEarlyAbort:
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_oversized_read_aborts_eval(self, mock_litellm):
         """Eval aborts on first kb.read() returning >3000 chars."""
         batch_mock = _make_batch_mock(
@@ -1045,7 +1045,7 @@ class TestRuntimeViolationEarlyAbort:
 class TestValScorerIntegration:
     """Tests for the pluggable val_scorer path."""
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_val_scorer_receives_retrieved_memory(self, mock_litellm):
         """When val_scorer is set, it receives KB-retrieved strings instead of LLM answering."""
         received_items = []
@@ -1094,7 +1094,7 @@ class TestValScorerIntegration:
         # Only 2 batch calls (train ki + val query), NOT 3 (no val answer generation)
         assert len(batch_mock.captured_calls) == 2
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_val_scorer_path_includes_conversation_history(self, mock_litellm):
         """ValScorer path should include retrieval conversation in failed_cases."""
 
@@ -1136,7 +1136,7 @@ class TestValScorerIntegration:
         assert roles == ["user", "assistant", "user"]
         assert fc.output == "episode transcript: FAIL"
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_val_scorer_none_uses_default_path(self, mock_litellm):
         """When val_scorer is None, existing LLM answer + scorer path is used (3 batch calls)."""
         batch_mock = _make_batch_mock(
@@ -1162,7 +1162,7 @@ class TestValScorerIntegration:
 class TestEvaluateDual:
     """Tests for MemoryEvaluator.evaluate_dual — single train ingestion, dual val eval."""
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_evaluate_dual_returns_two_results(self, mock_litellm):
         """evaluate_dual returns (score_result, reflect_result) with separate scores."""
         program = KBProgram(source_code=INITIAL_KB_PROGRAM)
@@ -1193,7 +1193,7 @@ class TestEvaluateDual:
         assert len(score_result.per_case_scores) == 1
         assert len(reflect_result.per_case_scores) == 1
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_evaluate_dual_shares_train_ingestion(self, mock_litellm):
         """Both val sets query the same KB built from a single train ingestion."""
         program = KBProgram(source_code=INITIAL_KB_PROGRAM)
@@ -1222,7 +1222,7 @@ class TestEvaluateDual:
         assert score_result is not None
         assert reflect_result is not None
 
-    @patch("programmaticmemory.evolution.evaluator.completion_with_retry")
+    @patch("mstar.evolution.evaluator.completion_with_retry")
     def test_evaluate_dual_compile_error_returns_empty_pair(self, mock_litellm):
         """Compile failure returns two zero-score results."""
         program = KBProgram(source_code="invalid python {{{{")

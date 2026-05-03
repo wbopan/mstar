@@ -11,11 +11,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from programmaticmemory.evolution.checkpoint import deserialize_pool_entry
-from programmaticmemory.evolution.evaluator import MemoryEvaluator
-from programmaticmemory.evolution.loop import EvolutionLoop
-from programmaticmemory.evolution.reflector import ReflectionResult, Reflector
-from programmaticmemory.evolution.types import (
+from mstar.evolution.checkpoint import deserialize_pool_entry
+from mstar.evolution.evaluator import MemoryEvaluator
+from mstar.evolution.loop import EvolutionLoop
+from mstar.evolution.reflector import ReflectionResult, Reflector
+from mstar.evolution.types import (
     DataItem,
     Dataset,
     EvalResult,
@@ -26,7 +26,7 @@ from programmaticmemory.evolution.types import (
     ProgramPool,
     SoftmaxSelection,
 )
-from programmaticmemory.logging.run_output import RunOutputManager
+from mstar.logging.run_output import RunOutputManager
 
 # ---------------------------------------------------------------------------
 # Minimal valid KB program seed

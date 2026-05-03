@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="assets/icon.png" width="160" alt="Engram">
+<img src="assets/icon.png" width="160" alt="Mstar">
 
-# Engram: Agent Memory Evolution
+# Mstar: Agent Memory Evolution
 
 **Optimizing memory architecture for every LLM task as executable Python code.**
 
-[![project page](https://img.shields.io/badge/project-page-orange?style=for-the-badge)](https://engram-project.wenbo.io)
+[![project page](https://img.shields.io/badge/project-page-orange?style=for-the-badge)](https://mstar-project.wenbo.io)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue?style=for-the-badge)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green?style=for-the-badge)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-632%20passing-brightgreen?style=for-the-badge)](#quick-start)
@@ -74,19 +74,19 @@ The toolkit available to evolved programs includes SQLite, ChromaDB, and a budge
 Python 3.12+, [uv](https://docs.astral.sh/uv/), an API key (e.g. `OPENROUTER_API_KEY` or `AZURE_API_KEY`).
 
 ```bash
-git clone https://github.com/wbopan/agent-memory-evolution.git
-cd agent-memory-evolution
+git clone https://github.com/wbopan/mstar.git
+cd mstar
 uv pip install -e ".[dev]"
 
 # run tests (no API key needed)
 uv run pytest tests/evolution/ -m "not llm" -v
 
 # evolve a memory system (needs API key)
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset mini_locomo --iterations 3 --no-weave
 
 # evaluate a single program without evolution
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset mini_locomo --seed-program seeds/vector_search.py \
   --iterations 0 --no-weave
 ```
@@ -125,7 +125,7 @@ class KnowledgeBase:
 ## Project structure
 
 ```
-src/programmaticmemory/
+src/mstar/
   evolution/        core loop, evaluator, reflector, sandbox, toolkit, types
   benchmarks/       dataset integrations
   baselines/        no-memory and vanilla-RAG

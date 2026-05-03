@@ -1,0 +1,54 @@
+% Table 1: Main Results
+% PURPOSE: Primary evidence — Ours vs baselines across benchmarks.
+%   Three baseline categories with colored group headers.
+%   LoCoMo: token F1 / LLM judge. ALFWorld: success rate. HB/PR: rubric score.
+\begin{table*}[t]
+    \centering
+    \footnotesize
+    \setlength{\tabcolsep}{3.5pt}
+    \caption{\textbf{Main results across four benchmark families.}
+    Columns report LoCoMo token F1 and LLM-judge score, ALFWorld success rate, HealthBench rubric score, and PRBench rubric score.
+    Baselines are grouped by memory paradigm.
+    Best per column in \textbf{bold}, second best in \second{green}.}
+    \vspace{-0.5em}
+    \label{tab:main-results}
+    % Use tabularx for full text width; X column absorbs slack on the method name.
+    \newcolumntype{Y}{>{\centering\arraybackslash}X}
+    \begin{tabularx}{\textwidth}{l *{2}{Y} *{2}{Y} *{2}{Y} *{2}{Y}}
+        \toprule
+        \rowcolor{gray!10}
+         & \multicolumn{2}{c}{\textbf{LoCoMo}} & \multicolumn{2}{c}{\textbf{ALFWorld}} & \multicolumn{2}{c}{\textbf{HealthBench}} & \multicolumn{2}{c}{\textbf{PRBench}} \\
+        \cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+        \rowcolor{gray!10}
+        \textbf{Method} & \textbf{F1} & \textbf{L-J} & \textbf{Unseen} & \textbf{Seen} & \textbf{Data} & \textbf{Emerg.} & \textbf{Legal} & \textbf{Finance} \\
+        \midrule
+        % --- No Memory (standalone, above first group) ---
+        No Memory            & 0.036 & 0.030 & 0.738 & 0.640 & 0.242 & 0.429 & 0.431 & 0.269 \\
+        \midrule
+        % --- Group 1: Retrieval-based Systems (Memorizing Episodes) ---
+        \multicolumn{9}{l}{\textit{\textbf{Retrieval-based Systems} (Memorizing Episodes)}} \\
+        \midrule
+        \quad Vector Search   & 0.256 & 0.400 & 0.643 & 0.720 & 0.264 & 0.400 & 0.466 & 0.308 \\
+        \quad G-Memory        & 0.224 & 0.380 & 0.690 & 0.560 & 0.309 & 0.447 & 0.499 & 0.318 \\
+        \quad Mem0            & \second{0.373} & \second{0.540} & 0.738 & 0.640 & 0.216 & 0.413 & 0.450 & 0.321 \\
+        \midrule
+        % --- Group 2: Self-evolution Systems (Memorizing Experiences) ---
+        \multicolumn{9}{l}{\textit{\textbf{Self-evolution Systems} (Memorizing Experiences)}} \\
+        \midrule
+        \quad Trajectory Retrieval & 0.276 & 0.420 & 0.714 & \second{0.780} & 0.265 & 0.442 & 0.480 & 0.304 \\
+        \quad ReasoningBank        & 0.194 & 0.380 & 0.738 & 0.580 & 0.315 & 0.470 & 0.508 & 0.330 \\
+        \quad Dynamic Cheatsheet   & 0.124 & 0.190 & 0.619 & 0.480 & 0.286 & \second{0.487} & 0.474 & 0.327 \\
+        \midrule
+        % --- Group 3: Prompt-optimizing systems (learned prompts) ---
+        \multicolumn{9}{l}{\textit{\textbf{Prompt-optimizing Systems} (Learned Prompts)}} \\
+        \midrule
+        \quad GEPA                 & 0.132 & 0.190 & \second{0.857} & 0.720 & 0.304 & 0.466 & \second{0.568} & \second{0.449} \\
+        \quad GEPA + Vector Search & 0.300 & 0.390 & 0.810 & \textbf{0.820} & \second{0.327} & 0.484 & 0.554 & 0.411 \\
+        \midrule
+        % --- Ours ---
+        \rowcolor{green!10}
+        \textbf{\sysname{}} & \textbf{0.459} & \textbf{0.610} & \textbf{0.881} & 0.700 & \textbf{0.390} & \textbf{0.493} & \textbf{0.660} & \textbf{0.586} \\
+        \bottomrule
+    \end{tabularx}%
+    \vspace{-1em}
+\end{table*}

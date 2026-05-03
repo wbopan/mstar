@@ -1,14 +1,14 @@
-"""Run GEPA baseline on Engram benchmarks.
+"""Run GEPA baseline on Mstar benchmarks.
 
 GEPA optimizes ONLY the ALWAYS_ON_KNOWLEDGE prompt constant. The code
 skeleton (KnowledgeItem, Query, KnowledgeBase, other INSTRUCTION_*)
 is frozen from the seed program.  Data splits, train subsets, scorer,
-and model parameters match the Engram evolution pipeline exactly.
+and model parameters match the Mstar evolution pipeline exactly.
 
 Usage:
     uv run python scripts/run_gepa_baseline.py \
         --dataset locomo --test-size 100 --test-train-ratio 3 \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --max-metric-calls 200 --output-dir outputs/gepa-locomo
 """
 
@@ -28,27 +28,27 @@ from gepa.api import optimize
 from gepa.core.adapter import EvaluationBatch
 from gepa.utils.stop_condition import MaxCandidateProposalsStopper
 
-from programmaticmemory.cache import configure_cache
-from programmaticmemory.datasets import load_dataset
-from programmaticmemory.evolution.__main__ import split_val_test
-from programmaticmemory.evolution.evaluator import (
+from mstar.cache import configure_cache
+from mstar.datasets import load_dataset
+from mstar.evolution.__main__ import split_val_test
+from mstar.evolution.evaluator import (
     ExactMatchScorer,
     MemoryEvaluator,
     set_batch_pool_size,
 )
-from programmaticmemory.evolution.sandbox import (
+from mstar.evolution.sandbox import (
     CompileError,
     compile_kb_program,
     smoke_test,
 )
-from programmaticmemory.evolution.strategies import SplitValidation, _subset_train_for_eval
-from programmaticmemory.evolution.toolkit import ToolkitConfig
-from programmaticmemory.evolution.types import DataItem, KBProgram
-
+from mstar.evolution.strategies import SplitValidation, _subset_train_for_eval
+from mstar.evolution.toolkit import ToolkitConfig
+from mstar.evolution.types import DataItem, KBProgram
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _parse_extra_kwargs(extra: list[str]) -> dict:
     kwargs: dict = {}
@@ -150,9 +150,7 @@ class AlwaysOnAdapter:
             return EvaluationBatch(
                 outputs=[""] * n,
                 scores=[0.0] * n,
-                trajectories=[
-                    Trace(item.question, item.expected_answer, "", 0.0) for item in batch
-                ]
+                trajectories=[Trace(item.question, item.expected_answer, "", 0.0) for item in batch]
                 if capture_traces
                 else None,
             )
@@ -165,9 +163,7 @@ class AlwaysOnAdapter:
             return EvaluationBatch(
                 outputs=[""] * n,
                 scores=[0.0] * n,
-                trajectories=[
-                    Trace(item.question, item.expected_answer, "", 0.0) for item in batch
-                ]
+                trajectories=[Trace(item.question, item.expected_answer, "", 0.0) for item in batch]
                 if capture_traces
                 else None,
             )
@@ -177,9 +173,7 @@ class AlwaysOnAdapter:
             return EvaluationBatch(
                 outputs=[""] * n,
                 scores=[0.0] * n,
-                trajectories=[
-                    Trace(item.question, item.expected_answer, "", 0.0) for item in batch
-                ]
+                trajectories=[Trace(item.question, item.expected_answer, "", 0.0) for item in batch]
                 if capture_traces
                 else None,
             )
@@ -236,9 +230,7 @@ class AlwaysOnAdapter:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Run GEPA baseline (ALWAYS_ON_KNOWLEDGE only) on Engram benchmarks"
-    )
+    parser = argparse.ArgumentParser(description="Run GEPA baseline (ALWAYS_ON_KNOWLEDGE only) on Mstar benchmarks")
     # --- Dataset / split flags (mirror __main__.py) ---
     parser.add_argument("--dataset", default="locomo")
     parser.add_argument("--category", default=None)
@@ -265,8 +257,12 @@ def main() -> None:
     parser.add_argument("--eval-rotate-size", type=int, default=5)
     # --- GEPA-specific flags ---
     parser.add_argument("--reflection-model", default="openrouter/openai/gpt-5.3-codex")
-    parser.add_argument("--max-proposals", type=int, default=20,
-                        help="Number of candidate proposals (iterations). Matches --iterations in ours.")
+    parser.add_argument(
+        "--max-proposals",
+        type=int,
+        default=20,
+        help="Number of candidate proposals (iterations). Matches --iterations in ours.",
+    )
     parser.add_argument("--reflection-minibatch-size", type=int, default=5)
     parser.add_argument("--seed-program", type=Path, required=True)
     parser.add_argument("--output-dir", type=str, required=True)
@@ -277,7 +273,7 @@ def main() -> None:
     set_batch_pool_size(args.batch_concurrency)
 
     # Azure config
-    from programmaticmemory.evolution.azure_config import configure_azure_auth
+    from mstar.evolution.azure_config import configure_azure_auth
 
     all_models = [
         args.task_model,
@@ -377,13 +373,10 @@ def main() -> None:
 
     best_aok = result.best_candidate["always_on"]
     best_val_score = result.val_aggregate_scores[result.best_idx]
-    print(
-        f"\nGEPA complete: {result.total_metric_calls} metric calls, "
-        f"best val score: {best_val_score:.3f}"
-    )
+    print(f"\nGEPA complete: {result.total_metric_calls} metric calls, best val score: {best_val_score:.3f}")
     print(f"Best ALWAYS_ON_KNOWLEDGE:\n{best_aok}")
 
-    # --- Test evaluation (same pipeline as Engram final_eval_data) ---
+    # --- Test evaluation (same pipeline as Mstar final_eval_data) ---
     best_source = inject_always_on_knowledge(seed_source, best_aok)
     if best_source == seed_source and best_aok != seed_aok:
         print("Error: inject_always_on_knowledge produced no change — check seed format", file=sys.stderr)
@@ -414,7 +407,7 @@ def main() -> None:
         # Per-category breakdown
         if dataset.category_key and test_result.per_case_scores:
             cat_scores: dict[str, list[float]] = {}
-            for sv, item in zip(test_result.per_case_scores, dataset.test):
+            for sv, item in zip(test_result.per_case_scores, dataset.test, strict=False):
                 cat = str(item.metadata.get(dataset.category_key, "unknown"))
                 cat_scores.setdefault(cat, []).append(sv)
             for cat, scores in sorted(cat_scores.items()):
@@ -427,13 +420,13 @@ def main() -> None:
             for name, scorer in dataset.extra_scorers.items():
                 scores = [
                     scorer(out, item.expected_answer)[0]
-                    for out, item in zip(test_result.per_case_outputs, dataset.test)
+                    for out, item in zip(test_result.per_case_outputs, dataset.test, strict=False)
                 ]
                 avg = sum(scores) / len(scores) if scores else 0.0
                 test_extra_metrics[name] = avg
                 print(f"  {name}: {avg:.3f}")
 
-    # --- Save summary (compatible with Engram summary.json) ---
+    # --- Save summary (compatible with Mstar summary.json) ---
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 

@@ -6,13 +6,13 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from programmaticmemory.evolution.batching import (
+from mstar.evolution.batching import (
     _balance_clusters,
     _embed_texts,
     _kmeans,
     _select_train_subset,
 )
-from programmaticmemory.evolution.types import DataItem
+from mstar.evolution.types import DataItem
 
 
 class TestEmbedTexts:
@@ -22,7 +22,7 @@ class TestEmbedTexts:
         mock_response = MagicMock()
         mock_response.data = [{"embedding": e} for e in fake_embeddings]
 
-        with patch("programmaticmemory.evolution.batching.litellm") as mock_litellm:
+        with patch("mstar.evolution.batching.litellm") as mock_litellm:
             mock_litellm.embedding.return_value = mock_response
             result = _embed_texts(["hello", "world"], model="test-model")
 
@@ -36,7 +36,7 @@ class TestEmbedTexts:
         mock_response = MagicMock()
         mock_response.data = [{"embedding": [1.0, 0.0]}]
 
-        with patch("programmaticmemory.evolution.batching.litellm") as mock_litellm:
+        with patch("mstar.evolution.batching.litellm") as mock_litellm:
             mock_litellm.embedding.return_value = mock_response
             _embed_texts(["hello"], model="openrouter/baai/bge-m3")
 
@@ -53,9 +53,9 @@ class TestEmbedTexts:
             resp.data = [{"embedding": [1.0, 0.0]} for _ in kwargs["input"]]
             return resp
 
-        with patch("programmaticmemory.evolution.batching.litellm") as mock_litellm:
+        with patch("mstar.evolution.batching.litellm") as mock_litellm:
             mock_litellm.embedding.side_effect = fake_embedding
-            with patch("programmaticmemory.evolution.batching._EMBED_BATCH_SIZE", 100):
+            with patch("mstar.evolution.batching._EMBED_BATCH_SIZE", 100):
                 result = _embed_texts([f"text_{i}" for i in range(150)], model="m")
 
         assert call_count == 2
@@ -232,7 +232,7 @@ class TestBalanceClusters:
         assert sum(sizes) == 5
 
 
-from programmaticmemory.evolution.batching import select_representative_subset
+from mstar.evolution.batching import select_representative_subset
 
 
 class TestSelectRepresentativeSubset:
@@ -250,7 +250,7 @@ class TestSelectRepresentativeSubset:
         val_size = 5
         train_ratio = 3
 
-        with patch("programmaticmemory.evolution.batching._embed_texts") as mock_embed:
+        with patch("mstar.evolution.batching._embed_texts") as mock_embed:
             mock_embed.side_effect = [
                 self._mock_embed(20),  # val embeddings
                 self._mock_embed(50),  # train embeddings
@@ -270,7 +270,7 @@ class TestSelectRepresentativeSubset:
         train = self._make_data(20)
         val = self._make_data(10)
 
-        with patch("programmaticmemory.evolution.batching._embed_texts") as mock_embed:
+        with patch("mstar.evolution.batching._embed_texts") as mock_embed:
             mock_embed.side_effect = [self._mock_embed(10), self._mock_embed(20)]
             _, val_idx = select_representative_subset(train, val, val_size=3, train_val_ratio=2)
 
@@ -281,7 +281,7 @@ class TestSelectRepresentativeSubset:
         train = self._make_data(20)
         val = self._make_data(10)
 
-        with patch("programmaticmemory.evolution.batching._embed_texts") as mock_embed:
+        with patch("mstar.evolution.batching._embed_texts") as mock_embed:
             mock_embed.side_effect = [self._mock_embed(10), self._mock_embed(20)]
             train_idx, _ = select_representative_subset(train, val, val_size=3, train_val_ratio=2)
 
@@ -293,7 +293,7 @@ class TestSelectRepresentativeSubset:
         train = self._make_data(10)
         val = self._make_data(5)
 
-        with patch("programmaticmemory.evolution.batching._embed_texts") as mock_embed:
+        with patch("mstar.evolution.batching._embed_texts") as mock_embed:
             mock_embed.side_effect = [self._mock_embed(5), self._mock_embed(10)]
             train_idx, val_idx = select_representative_subset(train, val, val_size=10, train_val_ratio=2)
 
@@ -304,7 +304,7 @@ class TestSelectRepresentativeSubset:
         train = self._make_data(20)
         val = self._make_data(10)
 
-        with patch("programmaticmemory.evolution.batching._embed_texts") as mock_embed:
+        with patch("mstar.evolution.batching._embed_texts") as mock_embed:
             mock_embed.side_effect = [
                 self._mock_embed(10),  # val embedding
                 RuntimeError("embedding failed"),

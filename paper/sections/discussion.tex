@@ -1,0 +1,38 @@
+\section{Discussion}
+\label{sec:discussion}
+
+In this section, we examine three properties of reflective code evolution: search diversity, seed stability, and category effects.
+
+\paragraph{How does evolution explore the program space?}
+
+Figure~\ref{fig:landscape}(c) provides another view of the search process.
+Evolved programs form several regions with different storage designs, including LLM-centric, vector-only, SQL-only, SQL+vector, and vector+LLM programs.
+Programs from different benchmarks often appear in the same regions.
+This pattern suggests that evolution can try common storage designs before adapting them to a task.
+Figure~\ref{fig:landscape}(a,b) further compares population-based search with a linear variant.
+The linear variant starts from one empty seed and repeatedly mutates only the current best program\rev{; this corresponds to the $-$\,Diversity ablation in Table~\ref{tab:ablation}}.
+Population search keeps multiple candidates active, so later mutations can draw from more than one candidate lineage.
+The LoCoMo ablation matches this interpretation: removing diversity reduces test F1 from 0.459 to 0.318, and max sampling with multiple starters reaches 0.381 (Table~\ref{tab:ablation}).
+These results suggest that population search helps preserve promising program lineages under a small iteration budget.
+
+\paragraph{Is evolution stable across random seeds?}
+
+% === Table: Stability Across Seeds ===
+\input{tables/stability}
+
+A practical concern for evolutionary methods is sensitivity to random seeds, especially under a 20-iteration budget in which discovery quality can depend on early mutations.
+To evaluate this effect, Table~\ref{tab:stability} reports test scores from five independent runs on three benchmarks.
+Across all benchmarks, the coefficient of variation remains \rev{at or below 10\%}, which indicates stable outcomes with moderate variance.
+Across the 15 runs, 14 outperform the strongest baseline, supporting consistent gains across initializations.
+Appendix~\ref{app:stability} provides full per-seed scores and validation trajectories.
+
+\paragraph{Does evolution improve performance uniformly?}
+
+% === Table: Per-Category Breakdown (combined) ===
+\input{tables/per_category}
+
+Table~\ref{tab:per-category} disaggregates the results in Table~\ref{tab:main-results} by category (full per-category tables are in Appendix~\ref{app:per-category}).
+On ALFWorld Unseen, \sysname{} raises the worst category score to 0.75, above the best baseline floor among the methods shown (0.67).
+This pattern suggests that the evolved action cache addresses failure modes that fixed designs leave exposed across task types.
+On LoCoMo, the gains are less uniform: \sysname{} is strongest on open-domain questions and tied on single-hop recall, while Mem0 and GEPA+Vector Search remain stronger on temporal and causal questions.
+This split suggests that an aggregate objective can improve the overall score while leaving lower-frequency or harder categories underserved.

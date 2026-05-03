@@ -3,7 +3,7 @@
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from programmaticmemory.evolution.prompts import (
+from mstar.evolution.prompts import (
     INITIAL_KB_PROGRAM,
     KB_INTERFACE_SPEC,
     ReferenceProgram,
@@ -17,7 +17,7 @@ from programmaticmemory.evolution.prompts import (
     build_reflection_user_prompt,
     build_retrieved_memory_prompt,
 )
-from programmaticmemory.evolution.types import (
+from mstar.evolution.types import (
     EvalResult,
     KBProgram,
     ProgramPool,
@@ -47,13 +47,13 @@ class TestInitialKBProgram:
         assert "ALWAYS_ON_KNOWLEDGE" in INITIAL_KB_PROGRAM
 
     def test_compiles(self):
-        from programmaticmemory.evolution.sandbox import CompileError, compile_kb_program
+        from mstar.evolution.sandbox import CompileError, compile_kb_program
 
         result = compile_kb_program(INITIAL_KB_PROGRAM)
         assert not isinstance(result, CompileError)
 
     def test_smoke_test_passes(self):
-        from programmaticmemory.evolution.sandbox import smoke_test
+        from mstar.evolution.sandbox import smoke_test
 
         result = smoke_test(INITIAL_KB_PROGRAM)
         assert result.success is True

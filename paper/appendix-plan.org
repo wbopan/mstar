@@ -1,0 +1,66 @@
+#+TITLE: Appendix Plan
+#+AUTHOR: Wenbo
+#+DATE: 2026-04-02
+#+PRIORITIES: A B C
+
+* Existing Sections (keep as-is)
+
+** DONE A. Dataset Details
+- Dataset split table + exclusion notes (category 5, hard items)
+
+** DONE B. Computational Cost
+- API calls / tokens / cost breakdown by benchmark and role
+
+** DONE C. Hyperparameters
+- Evolution parameters table
+
+* New Sections
+
+** TODO [#B] D. Seed Programs
+- Full source (or key excerpts) for 3 seeds: =vector_search.py=, =llm_summarizer.py=, =experience_learner.py=
+- Design rationale for each: vanilla RAG vs LLM summarization vs dual lesson/fact extraction
+- Purpose: show initial population diversity
+
+** TODO [#A] E. Evolved Programs
+- Best program per benchmark: full source or annotated =read()=/=write()= excerpts + line counts
+- Reuse archived LoCoMo vs ALFWorld code comparison from =archive_analysis.tex=
+- Cover all 4 benchmarks: LoCoMo (multi-signal episodic index), ALFWorld (deterministic action cache), HealthBench (criterion-keyed store), PRBench (domain-specific filtering)
+- Purpose: direct evidence for Observation 2 (different tasks \to structurally distinct programs)
+
+** TODO [#B] F. Reflection Prompt & Mutation Examples
+- One complete reflector prompt (failed cases, success cases, lineage log, reference programs)
+- Corresponding LLM output patch + compile-fix loop walkthrough
+- Purpose: concretize the "Prompt" and "Adapt" steps of GEPA
+
+** TODO [#A] G. Evaluation Rubrics / Metrics
+- HealthBench / PRBench: rubric scoring protocol details
+- LoCoMo: token-F1 computation
+- ALFWorld: success criterion
+- Purpose: reproducibility
+
+** TODO [#A] H. Per-Category Breakdown
+- Expand main-paper Table 4 to all benchmarks with full per-category scores
+- Include all baselines per sub-category
+- Purpose: fine-grained results that don't fit in main paper
+
+** TODO [#B] I. Stability Analysis
+- Full results from 12 multi-seed stability experiments (main paper only reports CV)
+- Overlaid per-seed evolution trajectories
+- Purpose: strengthen robustness discussion
+
+** TODO [#C] J. Design Space Comparison
+- Content / Skill / Module / Code four-level comparison table (already drafted in =archive_analysis.tex=)
+- Could also go in Related Work if space allows
+- Purpose: theoretical positioning
+
+* Priority Summary
+
+| Priority  | Section                 | Rationale                                  |
+|-----------+-------------------------+--------------------------------------------|
+| Must [#A] | E. Evolved Programs     | Core contribution evidence, reviewers want |
+| Must [#A] | G. Evaluation Rubrics   | Reproducibility standard                   |
+| Must [#A] | H. Per-Category Breakdown | Fine-grained results, convention         |
+| Rec. [#B] | D. Seed Programs        | Understand initial conditions              |
+| Rec. [#B] | F. Reflection Examples  | Concretize core method steps               |
+| Rec. [#B] | I. Stability Analysis   | Strengthen robustness argument             |
+| Opt. [#C] | J. Design Space Table   | Depends on main-paper space                |

@@ -1,0 +1,23 @@
+% §6 Related Work
+% Structure: MemSkill §2 sentence-level skeleton
+% Prose quality: GEPA-level (causal chains, specific mechanisms, dense)
+% Target: ~314 words ± 15%
+
+\section{Related Work}
+
+\rev{\noindent\textbf{Memory for LLM Agents.}
+Prior work on agent memory builds external stores from interaction histories~\citep{zhang2024survey_memory}: typical pipelines extract salient information, retrieve relevant entries for a new query, and update via consolidation or pruning~\citep{park2023generative,zhong2024memorybank,wang2024augmenting}.
+Recent systems learn richer policies; MemSkill~\citep{memskill} selects natural-language skills via an RL controller, and AWM~\citep{wang2024awm} induces reusable workflows from successful trajectories.
+Concurrent work on self-evolving memory stays within closed design spaces, e.g., MemEvolve~\citep{memevolve} searches over four predefined modules (encode, store, retrieve, manage).
+All commit to a fixed representation at design time and cannot express task-specific computational logic such as relational schemas or stateful aggregations.
+By contrast, we search over executable Python programs that implement arbitrary data structures and retrieval logic, subsuming these closed spaces.}
+
+\rev{\noindent\textbf{Self-Evolving Agents.}~\looseness=-1
+Self-evolving LLM agents improve from interaction experience without gradient-based updates~\citep{gao2025survey_selfevolving}.
+ExpeL~\citep{zhao2024expel} distills trajectories into editable natural-language insights, FLEX~\citep{cai2025flex} builds an experience library via continual reflection, and a complementary line automates agent design through meta-optimization (ADAS~\citep{hu2024adas}), skill synthesis (Voyager~\citep{wang2023voyager}), and verbal self-critique (Reflexion~\citep{shinn2023reflexion}).
+These systems evolve text-level artifacts that the LLM must re-interpret at runtime; \sysname{} instead evolves deterministic code, reducing interpretation variance and enabling explicit data structures and retrieval logic in each memory program.}
+
+\rev{\noindent\textbf{Program Search with Language Models. }
+Using LLMs as mutation operators has yielded solutions surpassing human heuristics in combinatorial optimization~\citep{romera2024funsearch}, neural architecture search~\citep{chen2023evoprompting}, and algorithmic discovery~\citep{deepmind2025alphaevolve}.
+Closest to our work, GEPA~\citep{gepa} mutates every prompt in a compound AI system via reflective natural-language updates with Pareto-front candidate selection.
+\sysname{} applies the same paradigm to executable memory programs; because generated code can fail to compile or violate runtime constraints, we add a compile-fix loop and runtime violation recovery that are unnecessary in prompt evolution (Section~\ref{sec:reflection}).}

@@ -1,0 +1,57 @@
+"""Unified dataset loading for mstar."""
+
+from __future__ import annotations
+
+from typing import Any, Callable
+
+from mstar.evolution.types import Dataset
+
+# User-registered datasets
+_CUSTOM_REGISTRY: dict[str, Callable[..., Dataset]] = {}
+
+_benchmarks_imported = False
+
+
+def _ensure_benchmarks_imported() -> None:
+    """Import the benchmarks package so @register_dataset decorators run."""
+    global _benchmarks_imported
+    if not _benchmarks_imported:
+        import mstar.benchmarks  # noqa: F401
+
+        _benchmarks_imported = True
+
+
+def register_dataset(name: str):
+    """Decorator to register a dataset loader."""
+
+    def decorator(fn: Callable[..., Dataset]) -> Callable[..., Dataset]:
+        _CUSTOM_REGISTRY[name] = fn
+        return fn
+
+    return decorator
+
+
+def load_dataset(
+    name: str,
+    *,
+    category: str | None = None,
+    **kwargs: Any,
+) -> Dataset:
+    """Load a dataset by name."""
+    _ensure_benchmarks_imported()
+    if name not in _CUSTOM_REGISTRY:
+        available = sorted(_CUSTOM_REGISTRY)
+        raise ValueError(f"Unknown dataset: {name!r}. Available: {available}")
+    import inspect
+
+    loader = _CUSTOM_REGISTRY[name]
+    sig = inspect.signature(loader)
+    # Only pass kwargs the loader actually accepts (avoids judge_model etc. breaking loaders)
+    filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
+    return loader(category=category, **filtered)
+
+
+def list_datasets() -> list[str]:
+    """Return sorted list of all available dataset names."""
+    _ensure_benchmarks_imported()
+    return sorted(_CUSTOM_REGISTRY)

@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fig 3 — Evolution Loop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600&display=block" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Regular.ttf") format("truetype");
+      font-weight: 400; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Bold.ttf") format("truetype");
+      font-weight: 700; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Italic.ttf") format("truetype");
+      font-weight: 400; font-style: italic;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; font-family: "Libertinus Sans", "Helvetica Neue", Arial, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script>
+    // COLOR PALETTE
+    const C = {
+      blue:   "#4285F4",
+      green:  "#34A853",
+      orange: "#FF6D01",
+      red:    "#EA4335",
+      purple: "#A142F4",
+      teal:   "#00897B",
+      dark:   "#2D2D2D",
+    };
+
+    function blend(hex, amount) {
+      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+      return `rgb(${Math.round(r+(255-r)*amount)},${Math.round(g+(255-g)*amount)},${Math.round(b+(255-b)*amount)})`;
+    }
+    function alpha(hex, a) {
+      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    // LAYOUT
+    const MV = 16, MH = 16;
+    const VERT_GAP = 20;
+    const MID_GAP = 10;
+    const HORZ_H = 100, SIDE_W = 150, SIDE_H = 210;
+    const HORZ_W = 2 * SIDE_W + MID_GAP;
+    const W = 2*MH + HORZ_W;
+    const H = 2*MV + 2*HORZ_H + 2*VERT_GAP + SIDE_H;
+
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", W).attr("height", H)
+      .attr("viewBox", `0 0 ${W} ${H}`)
+      .style("overflow", "hidden")
+      .attr("xmlns", "http://www.w3.org/2000/svg");
+
+    const defs = svg.append("defs");
+
+    // Drop shadow
+    const progShadow = defs.append("filter")
+      .attr("id", "prog-shadow")
+      .attr("x", "-20%").attr("y", "-20%")
+      .attr("width", "160%").attr("height", "160%");
+    progShadow.append("feDropShadow")
+      .attr("dx", 1).attr("dy", 2)
+      .attr("stdDeviation", 2)
+      .attr("flood-color", "#000")
+      .attr("flood-opacity", 0.12);
+
+    // Arrow markers
+    function addArrowMarker(id, color, size=5) {
+      defs.append("marker")
+        .attr("id", id)
+        .attr("viewBox", "0 0 10 10")
+        .attr("refX", 9).attr("refY", 5)
+        .attr("markerWidth", size).attr("markerHeight", size)
+        .attr("orient", "auto-start-reverse")
+        .append("path")
+        .attr("d", "M 0 1.5 L 10 5 L 0 8.5 z")
+        .attr("fill", color);
+    }
+    addArrowMarker("arr-green-sm", blend(C.green, 0.3), 6);
+    addArrowMarker("arr-orange-sm", blend(C.orange, 0.4), 6);
+    addArrowMarker("arr-purple-sm", blend(C.purple, 0.4), 6);
+    addArrowMarker("arr-gray-sm", "#999", 4);
+    addArrowMarker("arr-red-sm", blend(C.red, 0.4), 5);
+
+    const POOL = { x: MH, y: MV, w: HORZ_W, h: HORZ_H };
+    const GATE = { x: MH, y: MV + HORZ_H + VERT_GAP, w: SIDE_W, h: SIDE_H };
+    const EVAL = { x: MH + SIDE_W + MID_GAP, y: MV + HORZ_H + VERT_GAP, w: SIDE_W, h: SIDE_H };
+    const REFL = { x: MH, y: MV + HORZ_H + VERT_GAP + SIDE_H + VERT_GAP, w: HORZ_W, h: HORZ_H };
+
+    // HELPERS
+    function roundedRect(g, x, y, w, h, r, fill, stroke, sw=0.6) {
+      return g.append("rect")
+        .attr("x", x).attr("y", y).attr("width", w).attr("height", h)
+        .attr("rx", r).attr("ry", r)
+        .attr("fill", fill).attr("stroke", stroke).attr("stroke-width", sw);
+    }
+
+    function label(g, x, y, text, opts={}) {
+      return g.append("text")
+        .attr("x", x).attr("y", y)
+        .attr("fill", opts.color || "#666")
+        .attr("font-size", opts.size || "8px")
+        .attr("font-weight", opts.weight || "400")
+        .attr("font-style", opts.style || "normal")
+        .attr("font-family", opts.mono ? '"Source Code Pro", monospace' : '"Libertinus Sans", sans-serif')
+        .attr("text-anchor", opts.anchor || "start")
+        .attr("dominant-baseline", opts.baseline || "auto")
+        .text(text);
+    }
+
+    function arrow(g, points, color, marker, sw=0.8, dashed=false) {
+      const line = d3.line().x(d=>d[0]).y(d=>d[1]);
+      const p = g.append("path")
+        .attr("d", line(points))
+        .attr("fill", "none")
+        .attr("stroke", color)
+        .attr("stroke-width", sw)
+        .attr("marker-end", `url(#${marker})`);
+      if (dashed) p.attr("stroke-dasharray", "3,2");
+      return p;
+    }
+
+    function stepBadge(g, cx, cy, num, color) {
+      g.append("circle").attr("cx", cx).attr("cy", cy).attr("r", 8)
+        .attr("fill", color);
+      g.append("text")
+        .attr("x", cx).attr("y", cy+0.5)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "central")
+        .attr("fill", "white")
+        .attr("font-size", "8.5px").attr("font-weight", "700")
+        .text(num);
+    }
+
+    function docStack(g, cx, cy, w, h, color) {
+      [[3, 3], [1.5, 1.5], [0, 0]].forEach(([dx, dy], i) => {
+        const fill = i === 2 ? "white" : blend(color, 0.92 - i*0.03);
+        roundedRect(g, cx - w/2 + dx, cy - h/2 + dy, w, h, 2,
+          fill, blend(color, 0.4 + i*0.1), 0.4);
+      });
+      for (let i = 0; i < 3; i++) {
+        g.append("line")
+          .attr("x1", cx - w/2 + 3).attr("y1", cy - h/2 + 4 + i*4)
+          .attr("x2", cx + w/2 - 5 - (i===2?3:0)).attr("y2", cy - h/2 + 4 + i*4)
+          .attr("stroke", blend(color, 0.65)).attr("stroke-width", 0.3);
+      }
+    }
+
+    function lucideIcon(g, x, y, paths, color, size=14) {
+      const ic = g.append("g").attr("transform", `translate(${x},${y}) scale(${size/24})`);
+      (Array.isArray(paths) ? paths : [paths]).forEach(d => {
+        ic.append("path").attr("d", d)
+          .attr("fill", "none").attr("stroke", color)
+          .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+      });
+      return ic;
+    }
+
+    const sqFnPaths = ["M9 17c2 0 2.8-1 2.8-2.8V10c0-2 1-3.3 3.2-3", "M9 11.2h5.7"];
+    const sqFnRect = {x:3, y:3, w:18, h:18, rx:2};
+    function drawSqFnIcon(g, ix, iy, color, sz=12) {
+      const ic = g.append("g").attr("transform", `translate(${ix},${iy}) scale(${sz/24})`);
+      ic.append("rect").attr("x", sqFnRect.x).attr("y", sqFnRect.y)
+        .attr("width", sqFnRect.w).attr("height", sqFnRect.h).attr("rx", sqFnRect.rx)
+        .attr("fill", "none").attr("stroke", color).attr("stroke-width", 2)
+        .attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+      sqFnPaths.forEach(d => ic.append("path").attr("d", d)
+        .attr("fill", "none").attr("stroke", color).attr("stroke-width", 2)
+        .attr("stroke-linecap", "round").attr("stroke-linejoin", "round"));
+    }
+
+    const panelR = 0, panelSW = 1.2;
+
+    // ============================================================
+    // TOP -- SAMPLE FROM POOL
+    // ============================================================
+    const gPool = svg.append("g");
+
+    gPool.append("rect")
+      .attr("x", POOL.x).attr("y", POOL.y).attr("width", POOL.w).attr("height", POOL.h)
+      .attr("rx", panelR).attr("fill", blend(C.blue, 0.98))
+      .attr("stroke", "#7b8ea8").attr("stroke-width", panelSW);
+
+    const poolHalfW = POOL.w / 2;
+    const LX = POOL.x + 12;
+
+    stepBadge(gPool, LX + 6, POOL.y + 14, "1", blend(C.blue, 0.15));
+    label(gPool, LX + 20, POOL.y + 18, "Memory Schema",
+      {color: blend(C.blue, 0.1), size: "13px", weight: "700"});
+
+    const boxY = POOL.y + 25, boxH = 68;
+    const boxW = poolHalfW - 16;
+    roundedRect(gPool, LX - 4, boxY, boxW, boxH, 5,
+      "#fafafa", "#ccc", 0.8);
+    const stlX = LX + 3, stlY = boxY + 7;
+    [["#FF5F57", 0], ["#FEBC2E", 7], ["#28C840", 14]].forEach(([c, dx]) => {
+      gPool.append("circle").attr("cx", stlX + dx).attr("cy", stlY).attr("r", 2.5)
+        .attr("fill", c);
+    });
+
+    const row1Y = boxY + 15;
+    drawSqFnIcon(gPool, LX + 2, row1Y - 1, blend(C.blue, 0.3), 12);
+    label(gPool, LX + 18, row1Y + 8, "write()/read()", {color: "#444", size: "10px", mono: true});
+
+    const row2Y = row1Y + 19;
+    lucideIcon(gPool, LX + 2, row2Y - 1, "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", blend(C.purple, 0.35), 12);
+    label(gPool, LX + 18, row2Y + 8, "Instructions", {color: "#444", size: "10px"});
+
+    const row3Y = row2Y + 19;
+    lucideIcon(gPool, LX + 2, row3Y - 1, "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z", blend(C.teal, 0.3), 12);
+    label(gPool, LX + 18, row3Y + 8, "Toolkit", {color: "#444", size: "10px"});
+    const tkX = LX + 62;
+    lucideIcon(gPool, tkX, row3Y, ["M12 2C6.5 2 2 4.5 2 6s4.5 4 10 4 10-2.5 10-4-4.5-4-10-4z", "M2 6v6c0 1.5 4.5 4 10 4s10-2.5 10-4V6", "M2 12v6c0 1.5 4.5 4 10 4s10-2.5 10-4v-6"], blend(C.blue, 0.4), 9);
+    lucideIcon(gPool, tkX + 14, row3Y, "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z", blend(C.teal, 0.35), 9);
+    lucideIcon(gPool, tkX + 28, row3Y, ["M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z", "M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z", "M12 5v13"], blend(C.purple, 0.4), 9);
+
+    gPool.append("line")
+      .attr("x1", POOL.x + poolHalfW).attr("y1", POOL.y)
+      .attr("x2", POOL.x + poolHalfW).attr("y2", POOL.y + POOL.h)
+      .attr("stroke", blend(C.blue, 0.75)).attr("stroke-width", 0.4);
+
+    const RX = POOL.x + poolHalfW + 8;
+    const RW = poolHalfW - 16;
+
+    label(gPool, RX, POOL.y + 18, "Program Pool",
+      {color: blend(C.blue, 0.1), size: "13px", weight: "700"});
+
+    const programs = [
+      { checks: [1,0,1,1], score: 0.47 },
+      { checks: [1,1,0,0], score: 0.32 },
+      { checks: [1,1,1,0], score: 0.41 },
+      { checks: [0,1,1,1], score: 0.38 },
+      { checks: [1,0,0,1], score: 0.26 },
+    ];
+    const progStartY = POOL.y + 34;
+    const progRowH = 12;
+    const barMaxW = 30;
+    const maxScore = 0.50;
+
+    programs.forEach((prog, i) => {
+      const py = progStartY + i * progRowH;
+      lucideIcon(gPool, RX, py - 2, ["M3 3h18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", "M1 9h22"], blend(C.blue, 0.4), 9);
+      prog.checks.forEach((v, j) => {
+        label(gPool, RX + 14 + j * 10, py + 6, v ? "\u2713" : "\u00D7",
+          {color: v ? blend(C.green, 0.3) : blend(C.red, 0.35), size: "8px", anchor: "middle"});
+      });
+      label(gPool, RX + 56, py + 6, prog.score.toFixed(2),
+        {color: "#666", size: "7.5px", mono: true});
+      const barW = (prog.score / maxScore) * barMaxW;
+      gPool.append("rect")
+        .attr("x", RX + 78).attr("y", py + 1)
+        .attr("width", barW).attr("height", 5).attr("rx", 1)
+        .attr("fill", blend(C.blue, 0.5));
+      gPool.append("rect")
+        .attr("x", RX + 78 + barW).attr("y", py + 1)
+        .attr("width", barMaxW - barW).attr("height", 5).attr("rx", 1)
+        .attr("fill", blend(C.blue, 0.92));
+    });
+
+    // ============================================================
+    // RIGHT -- EVALUATE
+    // ============================================================
+    const gEval = svg.append("g");
+
+    gEval.append("rect")
+      .attr("x", EVAL.x).attr("y", EVAL.y).attr("width", EVAL.w).attr("height", EVAL.h)
+      .attr("rx", panelR).attr("fill", blend(C.green, 0.98))
+      .attr("stroke", "#6d9478").attr("stroke-width", panelSW);
+
+    stepBadge(gEval, EVAL.x + 16, EVAL.y + 16, "2", blend(C.green, 0.15));
+    label(gEval, EVAL.x + 30, EVAL.y + 20, "Evaluate",
+      {color: blend(C.green, 0.15), size: "13px", weight: "700"});
+
+    const evalMidY = EVAL.y + EVAL.h * 0.48;
+    const pipeX = EVAL.x + EVAL.w / 2;
+
+    gEval.append("line")
+      .attr("x1", EVAL.x).attr("y1", evalMidY)
+      .attr("x2", EVAL.x + EVAL.w).attr("y2", evalMidY)
+      .attr("stroke", blend(C.green, 0.6)).attr("stroke-width", 0.5);
+
+    const kbCX = pipeX, kbCY = evalMidY;
+    const cylW = 38, cylH = 30, cylArc = 7;
+
+    // === UPPER: Ingest phase ===
+    const ingestY = EVAL.y + 30;
+    const ingestCY = ingestY + 10;
+
+    docStack(gEval, EVAL.x + 16, ingestCY - 2, 18, 14, C.teal);
+    label(gEval, EVAL.x + 16, ingestCY + 16, "Episodes",
+      {color: blend(C.teal, 0.2), size: "7.5px", weight: "600", anchor: "middle"});
+
+    const pillW = 56, pillH = 20, pillR = pillH/2;
+    const pillSplit = 22;
+    const pillX = EVAL.x + EVAL.w/2 - pillW/2, pillY = ingestCY - pillH/2;
+    gEval.append("rect")
+      .attr("x", pillX).attr("y", pillY).attr("width", pillW).attr("height", pillH)
+      .attr("rx", pillR).attr("fill", "white")
+      .attr("stroke", blend(C.green, 0.35)).attr("stroke-width", 0.7);
+    gEval.append("clipPath").attr("id", "pill1-left")
+      .append("rect").attr("x", pillX).attr("y", pillY - 1).attr("width", pillSplit).attr("height", pillH + 2);
+    gEval.append("rect")
+      .attr("x", pillX).attr("y", pillY).attr("width", pillW).attr("height", pillH)
+      .attr("rx", pillR).attr("fill", blend(C.green, 0.3))
+      .attr("clip-path", "url(#pill1-left)");
+    const botG1 = gEval.append("g").attr("transform", `translate(${pillX + 4},${pillY + 3}) scale(${14/24})`);
+    ["M12 8V4H8", "M2 14h2", "M20 14h2", "M15 13v2", "M9 13v2"].forEach(d =>
+      botG1.append("path").attr("d", d).attr("fill", "none").attr("stroke", "white")
+        .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round"));
+    botG1.append("rect").attr("x", 4).attr("y", 8).attr("width", 16).attr("height", 12).attr("rx", 2)
+      .attr("fill", "none").attr("stroke", "white").attr("stroke-width", 2)
+      .attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+    label(gEval, pillX + pillSplit + 3, pillY + 13, "Agent",
+      {color: blend(C.green, 0.1), size: "8px", weight: "700"});
+
+    arrow(gEval, [[EVAL.x + 28, ingestCY], [pillX - 2, ingestCY]],
+      blend(C.green, 0.35), "arr-green-sm", 1.0);
+
+    const plusX = pillX + pillW + 4;
+    label(gEval, plusX, ingestCY + 4, "+",
+      {color: "#aaa", size: "10px", weight: "600", anchor: "middle"});
+
+    const bubX = plusX + 7, bubY = pillY + 1, bubW = 28, bubH = pillH - 2;
+    gEval.append("rect")
+      .attr("x", bubX).attr("y", bubY).attr("width", bubW).attr("height", bubH)
+      .attr("rx", 4).attr("fill", blend(C.purple, 0.92))
+      .attr("stroke", blend(C.purple, 0.6)).attr("stroke-width", 0.5);
+    gEval.append("path")
+      .attr("d", `M${bubX},${bubY + bubH/2 - 3} L${bubX - 3},${bubY + bubH/2} L${bubX},${bubY + bubH/2 + 3} Z`)
+      .attr("fill", blend(C.purple, 0.92)).attr("stroke", blend(C.purple, 0.6)).attr("stroke-width", 0.5);
+    gEval.append("line")
+      .attr("x1", bubX).attr("y1", bubY + bubH/2 - 4)
+      .attr("x2", bubX).attr("y2", bubY + bubH/2 + 4)
+      .attr("stroke", blend(C.purple, 0.92)).attr("stroke-width", 1.5);
+    label(gEval, bubX + bubW/2, bubY + 7, "Write",
+      {color: blend(C.purple, 0.15), size: "5.5px", weight: "600", anchor: "middle"});
+    label(gEval, bubX + bubW/2, bubY + 14, "Instr.",
+      {color: blend(C.purple, 0.15), size: "5.5px", weight: "600", anchor: "middle"});
+
+    const wrBoxW = 50, wrBoxH = 16;
+    const wrBoxX = EVAL.x + EVAL.w/2 - wrBoxW/2, wrBoxY = ingestCY + pillH/2 + 8;
+    drawSqFnIcon(gEval, wrBoxX + wrBoxW/2 - 6, wrBoxY + 1, blend(C.green, 0.35), 12);
+    label(gEval, wrBoxX + wrBoxW/2 + 8, wrBoxY + 9, "write()",
+      {color: "#777", size: "7.5px", weight: "600", mono: true});
+
+    arrow(gEval, [[pillX + pillW/2, pillY + pillH + 1], [wrBoxX + wrBoxW/2, wrBoxY - 1]],
+      blend(C.green, 0.35), "arr-green-sm", 1.0);
+
+    arrow(gEval, [[wrBoxX + wrBoxW/2, wrBoxY + wrBoxH + 1], [kbCX, kbCY - cylH/2 - 1]],
+      blend(C.green, 0.35), "arr-green-sm", 1.0);
+
+    // === DB icon straddling the divider ===
+    const dbIconW = 36, dbIconH = 28;
+    gEval.append("rect")
+      .attr("x", kbCX - dbIconW/2 - 4).attr("y", kbCY - dbIconH/2 - 4)
+      .attr("width", dbIconW + 8).attr("height", dbIconH + 8)
+      .attr("fill", blend(C.green, 0.96)).attr("stroke", "none");
+    const dbG = gEval.append("g").attr("transform", `translate(${kbCX - dbIconW/2},${kbCY - dbIconH/2}) scale(${dbIconW/24},${dbIconH/24})`);
+    dbG.append("ellipse").attr("cx", 12).attr("cy", 5).attr("rx", 9).attr("ry", 3)
+      .attr("fill", blend(C.green, 0.85)).attr("stroke", blend(C.green, 0.25)).attr("stroke-width", 1.2)
+      .attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+    ["M3 5V19A9 3 0 0 0 21 19V5", "M3 12A9 3 0 0 0 21 12"].forEach(d =>
+      dbG.append("path").attr("d", d)
+        .attr("fill", "none").attr("stroke", blend(C.green, 0.25)).attr("stroke-width", 1.2)
+        .attr("stroke-linecap", "round").attr("stroke-linejoin", "round"));
+
+    // === LOWER: Validate phase ===
+    const rdBoxW = 50, rdBoxH = 16;
+    const rdBoxX = EVAL.x + EVAL.w/2 - rdBoxW/2, rdBoxY = kbCY + cylH/2 + 6;
+    drawSqFnIcon(gEval, rdBoxX + rdBoxW/2 - 6, rdBoxY + 1, blend(C.green, 0.35), 12);
+    label(gEval, rdBoxX + rdBoxW/2 + 8, rdBoxY + 9, "read()",
+      {color: "#777", size: "7.5px", weight: "600", mono: true});
+
+    arrow(gEval, [[kbCX, kbCY + cylH/2 + 1], [rdBoxX + rdBoxW/2, rdBoxY - 1]],
+      blend(C.green, 0.35), "arr-green-sm", 1.0);
+
+    const valCY = rdBoxY + rdBoxH + 18;
+    const pill2X = EVAL.x + EVAL.w/2 - pillW/2, pill2Y = valCY - pillH/2;
+    gEval.append("rect")
+      .attr("x", pill2X).attr("y", pill2Y).attr("width", pillW).attr("height", pillH)
+      .attr("rx", pillR).attr("fill", "white")
+      .attr("stroke", blend(C.green, 0.35)).attr("stroke-width", 0.7);
+    gEval.append("clipPath").attr("id", "pill2-left")
+      .append("rect").attr("x", pill2X).attr("y", pill2Y - 1).attr("width", pillSplit).attr("height", pillH + 2);
+    gEval.append("rect")
+      .attr("x", pill2X).attr("y", pill2Y).attr("width", pillW).attr("height", pillH)
+      .attr("rx", pillR).attr("fill", blend(C.green, 0.3))
+      .attr("clip-path", "url(#pill2-left)");
+    const botG2 = gEval.append("g").attr("transform", `translate(${pill2X + 4},${pill2Y + 3}) scale(${14/24})`);
+    ["M12 8V4H8", "M2 14h2", "M20 14h2", "M15 13v2", "M9 13v2"].forEach(d =>
+      botG2.append("path").attr("d", d).attr("fill", "none").attr("stroke", "white")
+        .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round"));
+    botG2.append("rect").attr("x", 4).attr("y", 8).attr("width", 16).attr("height", 12).attr("rx", 2)
+      .attr("fill", "none").attr("stroke", "white").attr("stroke-width", 2)
+      .attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
+    label(gEval, pill2X + pillSplit + 3, pill2Y + 13, "Agent",
+      {color: blend(C.green, 0.1), size: "8px", weight: "700"});
+
+    docStack(gEval, EVAL.x + 16, valCY - 2, 18, 14, C.orange);
+    label(gEval, EVAL.x + 16, valCY + 16, "Val set",
+      {color: blend(C.orange, 0.2), size: "7.5px", weight: "600", anchor: "middle"});
+
+    arrow(gEval, [[EVAL.x + 28, valCY], [pill2X - 2, valCY]],
+      blend(C.green, 0.35), "arr-green-sm", 1.0);
+
+    const plus2X = pill2X + pillW + 4;
+    label(gEval, plus2X, valCY + 4, "+",
+      {color: "#aaa", size: "10px", weight: "600", anchor: "middle"});
+    const bub2X = plus2X + 7, bub2Y = pill2Y + 1, bub2W = 28, bub2H = pillH - 2;
+    gEval.append("rect")
+      .attr("x", bub2X).attr("y", bub2Y).attr("width", bub2W).attr("height", bub2H)
+      .attr("rx", 4).attr("fill", blend(C.purple, 0.92))
+      .attr("stroke", blend(C.purple, 0.6)).attr("stroke-width", 0.5);
+    gEval.append("path")
+      .attr("d", `M${bub2X},${bub2Y + bub2H/2 - 3} L${bub2X - 3},${bub2Y + bub2H/2} L${bub2X},${bub2Y + bub2H/2 + 3} Z`)
+      .attr("fill", blend(C.purple, 0.92)).attr("stroke", blend(C.purple, 0.6)).attr("stroke-width", 0.5);
+    gEval.append("line")
+      .attr("x1", bub2X).attr("y1", bub2Y + bub2H/2 - 4)
+      .attr("x2", bub2X).attr("y2", bub2Y + bub2H/2 + 4)
+      .attr("stroke", blend(C.purple, 0.92)).attr("stroke-width", 1.5);
+    label(gEval, bub2X + bub2W/2, bub2Y + 7, "Read",
+      {color: blend(C.purple, 0.15), size: "5.5px", weight: "600", anchor: "middle"});
+    label(gEval, bub2X + bub2W/2, bub2Y + 14, "Instr.",
+      {color: blend(C.purple, 0.15), size: "5.5px", weight: "600", anchor: "middle"});
+
+    arrow(gEval, [[rdBoxX + rdBoxW/2, rdBoxY + rdBoxH + 1], [pill2X + pillW/2, pill2Y - 1]],
+      blend(C.green, 0.35), "arr-green-sm", 1.0);
+
+    const resultsY = pill2Y + pillH + 10;
+    arrow(gEval, [[pill2X + pillW/2, pill2Y + pillH + 1], [pipeX, resultsY - 1]],
+      blend(C.green, 0.35), "arr-green-sm", 1.0);
+
+    const circR = 6, circGap = 3;
+    const rotChecks = [1, 0, 0, 0];
+    const rotStartX = EVAL.x + 14;
+    const circCY = resultsY + circR + 2;
+
+    rotChecks.forEach((v, i) => {
+      const cx = rotStartX + circR + i * (circR * 2 + circGap);
+      gEval.append("circle").attr("cx", cx).attr("cy", circCY).attr("r", circR)
+        .attr("fill", blend(C.orange, 0.9))
+        .attr("stroke", blend(C.orange, 0.5)).attr("stroke-width", 0.6);
+      label(gEval, cx, circCY + 3.5, v ? "\u2713" : "\u00D7",
+        {color: v ? blend(C.green, 0.15) : blend(C.red, 0.2), size: "8px", weight: "700", anchor: "middle"});
+    });
+    label(gEval, rotStartX + 2 * (circR * 2 + circGap) - circGap/2, circCY + circR + 10, "Rotating Set",
+      {color: "#999", size: "6.5px", anchor: "middle"});
+
+    const capX = rotStartX + 4 * (circR * 2 + circGap) + circGap;
+    const capW = EVAL.x + EVAL.w - capX - 8, capH = circR * 2, capY = circCY - capH/2;
+    gEval.append("rect")
+      .attr("x", capX).attr("y", capY).attr("width", capW).attr("height", capH)
+      .attr("rx", capH/2).attr("fill", blend(C.orange, 0.9))
+      .attr("stroke", blend(C.orange, 0.5)).attr("stroke-width", 0.6);
+    label(gEval, capX + 6, circCY + 3, "0.47",
+      {color: blend(C.orange, 0.1), size: "7px", weight: "700", mono: true});
+    const barX = capX + 26, barW = capW - 32, barH = 4;
+    gEval.append("rect")
+      .attr("x", barX).attr("y", circCY - barH/2).attr("width", barW).attr("height", barH)
+      .attr("rx", 2).attr("fill", blend(C.orange, 0.82));
+    gEval.append("rect")
+      .attr("x", barX).attr("y", circCY - barH/2).attr("width", barW * 0.47 / 0.6).attr("height", barH)
+      .attr("rx", 2).attr("fill", blend(C.orange, 0.3));
+    label(gEval, capX + capW/2, circCY + circR + 10, "Static Set",
+      {color: "#999", size: "6.5px", anchor: "middle"});
+
+    // ============================================================
+    // BOTTOM -- REFLECT & MUTATE
+    // ============================================================
+    const gRefl = svg.append("g");
+
+    gRefl.append("rect")
+      .attr("x", REFL.x).attr("y", REFL.y).attr("width", REFL.w).attr("height", REFL.h)
+      .attr("rx", panelR).attr("fill", blend(C.purple, 0.98))
+      .attr("stroke", "#7d6b94").attr("stroke-width", panelSW);
+
+    stepBadge(gRefl, REFL.x + 16, REFL.y + 16, "3", blend(C.purple, 0.15));
+    label(gRefl, REFL.x + 30, REFL.y + 20, "Reflect & Mutate",
+      {color: blend(C.purple, 0.1), size: "13px", weight: "700"});
+
+    const rColX = REFL.x + REFL.w - 66;
+    const rProgW = 22, rProgH = 16;
+    const rProgX = rColX, rProgY = REFL.y + 28;
+    gRefl.append("rect")
+      .attr("x", rProgX).attr("y", rProgY)
+      .attr("width", rProgW).attr("height", rProgH).attr("rx", 3)
+      .attr("fill", "#fafafa").attr("stroke", "#ccc").attr("stroke-width", 0.7);
+    [["#FF5F57", 0], ["#FEBC2E", 5], ["#28C840", 10]].forEach(([c, dx]) => {
+      gRefl.append("circle").attr("cx", rProgX + 4 + dx).attr("cy", rProgY + 4.5).attr("r", 1.5)
+        .attr("fill", c);
+    });
+    [[8, "#7c4dff"], [12, "#1976d2"], [6, "#388e3c"]].forEach(([w, c], i) => {
+      gRefl.append("rect")
+        .attr("x", rProgX + 3).attr("y", rProgY + 8 + i * 2.5)
+        .attr("width", w).attr("height", 1.2).attr("rx", 0.5)
+        .attr("fill", c).attr("opacity", 0.4);
+    });
+    label(gRefl, rProgX + rProgW + 4, rProgY + 5, "Current",
+      {color: "#555", size: "7px"});
+    label(gRefl, rProgX + rProgW + 4, rProgY + 12, "Program",
+      {color: "#555", size: "7px"});
+
+    const rListY = REFL.y + 50;
+    roundedRect(gRefl, rColX - 4, rListY - 4, 64, 44, 4,
+      blend(C.purple, 0.97), blend(C.purple, 0.6), 0.4);
+    lucideIcon(gRefl, rColX - 1, rListY - 1,
+      ["M22 11.08V12a10 10 0 1 1-5.93-9.14", "M22 4 12 14.01l-3-3"],
+      blend(C.green, 0.35), 9);
+    label(gRefl, rColX + 12, rListY + 6, "Success cases", {color: "#555", size: "7px"});
+    lucideIcon(gRefl, rColX - 1, rListY + 12,
+      ["M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z", "M15 9l-6 6", "M9 9l6 6"],
+      blend(C.red, 0.35), 9);
+    label(gRefl, rColX + 12, rListY + 19, "Failed cases", {color: "#555", size: "7px"});
+    lucideIcon(gRefl, rColX - 1, rListY + 25,
+      ["M6 3v12", "M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M18 9a9 9 0 0 1-9 9"],
+      blend(C.blue, 0.35), 9);
+    label(gRefl, rColX + 12, rListY + 32, "Lineage log", {color: "#555", size: "7px"});
+
+    const refBoxW = 76, refBoxH = 32;
+    const refBoxX = REFL.x + REFL.w/2 - refBoxW/2 - 4;
+    const refBoxY = REFL.y + 50;
+    const refHeaderH = 14;
+    roundedRect(gRefl, refBoxX, refBoxY, refBoxW, refBoxH, 5,
+      "white", blend(C.purple, 0.4), 0.7);
+    gRefl.append("clipPath").attr("id", "refl-header-clip")
+      .append("rect").attr("x", refBoxX).attr("y", refBoxY)
+      .attr("width", refBoxW).attr("height", refHeaderH + 5).attr("rx", 5);
+    gRefl.append("rect")
+      .attr("x", refBoxX).attr("y", refBoxY)
+      .attr("width", refBoxW).attr("height", refHeaderH)
+      .attr("fill", blend(C.purple, 0.25))
+      .attr("clip-path", "url(#refl-header-clip)");
+    lucideIcon(gRefl, refBoxX + 3, refBoxY + 1,
+      ["M12 5a3 3 0 1 0-5.997.142 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z",
+       "M9 13a4.38 4.38 0 0 0 2.5 4.035",
+       "M15 5.121A4 4 0 0 1 19.794 9",
+       "M21,16 a3,3 0 1,0 -6,0 a3,3 0 1,0 6,0",
+       "M19.5 13l.5-1", "M21 16h1", "M19.5 19l.5 1",
+       "M16.5 19l-.5 1", "M15 16h-1", "M16.5 13l-.5-1"],
+      "white", 11);
+    label(gRefl, refBoxX + 19, refBoxY + 11, "Reflector",
+      {color: "white", size: "9px", weight: "700"});
+    label(gRefl, refBoxX + refBoxW/2, refBoxY + refHeaderH + 6, "Diagnose eval errors",
+      {color: "#999", size: "6px", anchor: "middle"});
+    label(gRefl, refBoxX + refBoxW/2, refBoxY + refHeaderH + 13, "and generate patch",
+      {color: "#999", size: "6px", anchor: "middle"});
+
+    const reflMidY = refBoxY + refBoxH/2;
+    arrow(gRefl, [[rColX - 4, reflMidY], [refBoxX + refBoxW + 2, reflMidY]],
+      blend(C.purple, 0.35), "arr-purple-sm", 1.0);
+
+    const reflOutX = REFL.x + 10;
+    const outStartY = REFL.y + 28;
+
+    roundedRect(gRefl, reflOutX - 4, outStartY - 4, 64, 72, 4,
+      blend(C.purple, 0.97), blend(C.purple, 0.6), 0.4);
+
+    const dpX = reflOutX, dpY = outStartY;
+    const dpW = 24, dpH = 22;
+    gRefl.append("rect").attr("x", dpX).attr("y", dpY)
+      .attr("width", dpW).attr("height", dpH).attr("rx", 2)
+      .attr("fill", "#fafafa").attr("stroke", "#ccc").attr("stroke-width", 0.5);
+    gRefl.append("rect").attr("x", dpX).attr("y", dpY)
+      .attr("width", dpW).attr("height", 4).attr("rx", 2).attr("fill", "#e8e8e8");
+    gRefl.append("rect").attr("x", dpX).attr("y", dpY + 2)
+      .attr("width", dpW).attr("height", 2).attr("fill", "#e8e8e8");
+    const diffLines = [
+      {c: "#bbb", w: 16, pfx: " "}, {c: "#e53935", w: 14, pfx: "\u2212"},
+      {c: "#43a047", w: 12, pfx: "+"}, {c: "#43a047", w: 16, pfx: "+"},
+      {c: "#bbb", w: 10, pfx: " "},
+    ];
+    diffLines.forEach(({c, w, pfx}, i) => {
+      const ly = dpY + 6 + i * 3;
+      label(gRefl, dpX + 2, ly + 2, pfx, {color: c, size: "4px", mono: true});
+      gRefl.append("rect").attr("x", dpX + 6).attr("y", ly)
+        .attr("width", w).attr("height", 1.5).attr("rx", 0.5)
+        .attr("fill", c).attr("opacity", 0.5);
+    });
+    label(gRefl, dpX + dpW + 3, dpY + 18, "Diff patch", {color: "#555", size: "7px"});
+
+    const anaY = outStartY + dpH + 10;
+    lucideIcon(gRefl, reflOutX + 1, anaY - 1,
+      "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+      blend(C.purple, 0.35), 10);
+    label(gRefl, reflOutX + 14, anaY + 6, "Analysis", {color: "#555", size: "7px"});
+
+    const logY = anaY + 13;
+    lucideIcon(gRefl, reflOutX + 1, logY - 1,
+      ["M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z",
+       "M14 2v6h6", "M16 13H8", "M16 17H8", "M10 9H8"],
+      blend(C.purple, 0.35), 10);
+    label(gRefl, reflOutX + 14, logY + 6, "Change log", {color: "#555", size: "7px"});
+
+    arrow(gRefl, [[refBoxX - 1, reflMidY], [reflOutX + dpW + 40, reflMidY]],
+      blend(C.purple, 0.35), "arr-purple-sm", 1.0);
+
+    const progArrowY = rProgY + rProgH/2;
+    gRefl.append("path")
+      .attr("d", `M${rProgX},${progArrowY} L${dpX + dpW + 2},${progArrowY}`)
+      .attr("fill", "none").attr("stroke", blend(C.purple, 0.4))
+      .attr("stroke-width", 0.8).attr("stroke-dasharray", "3,2")
+      .attr("marker-end", "url(#arr-purple-sm)");
+
+    // ============================================================
+    // LEFT -- QUALITY GATES
+    // ============================================================
+    const gGate = svg.append("g");
+
+    gGate.append("rect")
+      .attr("x", GATE.x).attr("y", GATE.y).attr("width", GATE.w).attr("height", GATE.h)
+      .attr("rx", panelR).attr("fill", blend(C.red, 0.98))
+      .attr("stroke", "#a07070").attr("stroke-width", panelSW);
+
+    stepBadge(gGate, GATE.x + 16, GATE.y + 16, "4", blend(C.red, 0.15));
+    label(gGate, GATE.x + 30, GATE.y + 20, "Quality Gates",
+      {color: blend(C.red, 0.1), size: "13px", weight: "700"});
+
+    const gateW = 100, gateH = 36;
+    const gateGap = 10;
+    const gateX = GATE.x + (GATE.w - gateW) / 2;
+
+    const gates = [
+      { label: "Compile", color: C.red,
+        detail: "Valid syntax & imports",
+        iconPaths: ["M16 18a4 4 0 0 0-8 0", "M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z",
+                    "M7 9h2", "M15 9h2", "M8 13h8"] },
+      { label: "Smoke Test", color: C.orange,
+        detail: "write()/read() cycle",
+        iconPaths: ["M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z",
+                    "M14 2v6h6", "M9 15l2 2 4-4"] },
+      { label: "Exec Limits", color: C.teal,
+        detail: "Output \u22643000 chars, \u226460s",
+        iconPaths: ["M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z", "M12 6v6l4 2"] },
+    ];
+
+    const gateBottomY = GATE.y + GATE.h - 54;
+    gates.forEach((gate, i) => {
+      gate.gy = gateBottomY - (i + 1) * (gateH + gateGap) + gateGap;
+    });
+
+    gates.forEach((gate, i) => {
+      roundedRect(gGate, gateX, gate.gy, gateW, gateH, 4,
+        "white", blend(gate.color, 0.4), 0.6);
+      lucideIcon(gGate, gateX + 6, gate.gy + 4, gate.iconPaths,
+        blend(gate.color, 0.3), 10);
+      label(gGate, gateX + 20, gate.gy + 13, gate.label,
+        {color: "#444", size: "8.5px", weight: "600"});
+      label(gGate, gateX + 8, gate.gy + 28, gate.detail,
+        {color: blend(gate.color, 0.4), size: "6.5px"});
+    });
+
+    for (let i = 0; i < gates.length - 1; i++) {
+      const fromY = gates[i].gy;
+      const toY = gates[i+1].gy + gateH;
+      arrow(gGate, [[gateX + gateW/2, fromY - 1], [gateX + gateW/2, toY + 1]],
+        blend(C.green, 0.4), "arr-green-sm", 1.4);
+      label(gGate, gateX + gateW/2 + 10, (fromY + toY) / 2 + 2, "pass",
+        {color: blend(C.green, 0.3), size: "7.5px"});
+    }
+
+    const failX = gateX + gateW + 4;
+
+    gates.forEach((gate) => {
+      gGate.append("line")
+        .attr("x1", gateX + gateW).attr("y1", gate.gy + gateH/2)
+        .attr("x2", failX + 2).attr("y2", gate.gy + gateH/2)
+        .attr("stroke", blend(C.red, 0.4)).attr("stroke-width", 1.0);
+    });
+    gGate.append("line")
+      .attr("x1", failX + 2).attr("y1", gates[2].gy + gateH/2)
+      .attr("x2", failX + 2).attr("y2", gates[0].gy + gateH/2)
+      .attr("stroke", blend(C.red, 0.35)).attr("stroke-width", 1.0);
+    label(gGate, failX + 6, gates[1].gy + gateH/2 + 3, "fail",
+      {color: blend(C.red, 0.3), size: "7.5px"});
+
+    const fixW = gateW, fixH = 32;
+    const fixX = gateX, fixY = GATE.y + GATE.h - fixH - 10;
+    roundedRect(gGate, fixX, fixY, fixW, fixH, 4,
+      "white", blend(C.orange, 0.4), 0.6);
+    lucideIcon(gGate, fixX + 6, fixY + 4,
+      "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
+      blend(C.orange, 0.3), 10);
+    label(gGate, fixX + 20, fixY + 13, "LLM Auto-Fix",
+      {color: "#444", size: "8.5px", weight: "600"});
+    label(gGate, fixX + 8, fixY + 25, "Repair errors, up to k\u00D73",
+      {color: blend(C.orange, 0.4), size: "6.5px"});
+
+    arrow(gGate, [[failX + 2, gates[0].gy + gateH/2], [failX + 2, fixY + fixH/2]],
+      blend(C.red, 0.35), "arr-red-sm", 1.0);
+    gGate.append("line")
+      .attr("x1", failX + 2).attr("y1", fixY + fixH/2)
+      .attr("x2", fixX + fixW).attr("y2", fixY + fixH/2)
+      .attr("stroke", blend(C.red, 0.35)).attr("stroke-width", 1.0);
+
+    gGate.append("path")
+      .attr("d", `M${fixX},${fixY + fixH/2} C${fixX - 16},${fixY + fixH/2} ${fixX - 16},${gates[0].gy + gateH/2} ${gateX},${gates[0].gy + gateH/2}`)
+      .attr("fill", "none").attr("stroke", blend(C.orange, 0.4))
+      .attr("stroke-width", 1.0).attr("stroke-dasharray", "3,2")
+      .attr("marker-end", "url(#arr-orange-sm)");
+
+    // ============================================================
+    // FLOW ARROWS BETWEEN PANELS
+    // ============================================================
+    const gFlow = svg.append("g");
+
+    const chevDownPath = "M6 9l6 6 6-6";
+    const chevUpPath = "M18 15l-6-6-6 6";
+
+    // 1->2: POOL -> EVAL
+    {
+      const cx = EVAL.x + EVAL.w / 2;
+      const midY = POOL.y + POOL.h + VERT_GAP / 2;
+      lucideIcon(gFlow, cx - 6, midY - 6, chevDownPath, "#aaa", 12);
+      label(gFlow, cx + 10, midY + 4, "Program",
+        {color: "#999", size: "8px"});
+    }
+
+    // 2->3: EVAL -> REFL
+    {
+      const cx = EVAL.x + EVAL.w / 2;
+      const midY = EVAL.y + EVAL.h + VERT_GAP / 2;
+      lucideIcon(gFlow, cx - 6, midY - 6, chevDownPath, "#aaa", 12);
+      label(gFlow, cx + 10, midY + 4, "Results",
+        {color: "#999", size: "8px"});
+    }
+
+    // 3->4: REFL -> GATE
+    {
+      const cx = GATE.x + GATE.w / 2;
+      const midY = GATE.y + GATE.h + VERT_GAP / 2;
+      lucideIcon(gFlow, cx - 6, midY - 6, chevUpPath, "#aaa", 12);
+      label(gFlow, cx - 46, midY + 4, "Child P\u2032",
+        {color: "#999", size: "8px"});
+    }
+
+    // 4->1: GATE -> POOL
+    {
+      const cx = GATE.x + GATE.w / 2;
+      const midY = POOL.y + POOL.h + VERT_GAP / 2;
+      lucideIcon(gFlow, cx - 6, midY - 6, chevUpPath, "#aaa", 12);
+      label(gFlow, cx - 46, midY + 4, "Validated",
+        {color: "#999", size: "8px"});
+    }
+  </script>
+</body>
+</html>

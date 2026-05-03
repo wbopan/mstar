@@ -49,21 +49,21 @@ run() {
     echo "================================================================"
     echo "  $label"
     echo "================================================================"
-    echo "  Command: uv run python -m programmaticmemory.evolution $*"
+    echo "  Command: uv run python -m mstar.evolution $*"
     echo ""
-    uv run python -m programmaticmemory.evolution "$@"
+    uv run python -m mstar.evolution "$@"
 }
 
 _run_ds_group() {
     local COMMON_DS="$1" DS_SLUG="$2" EVOL_DS="$3"
     run "T1: $DS_SLUG / No Memory" \
         $COMMON_DS \
-        --seed-program src/programmaticmemory/baselines/no_memory.py \
+        --seed-program src/mstar/baselines/no_memory.py \
         --iterations 0 \
         --output-dir outputs/t1-${DS_SLUG}-no-memory
     run "T1: $DS_SLUG / Vanilla RAG" \
         $COMMON_DS \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --iterations 0 \
         --output-dir outputs/t1-${DS_SLUG}-vanilla-rag
     run "T1: $DS_SLUG / Ours (evolution)" \
@@ -80,13 +80,13 @@ run_table1() {
     # --- LoCoMo ---
     run "T1: LoCoMo / No Memory" \
         $COMMON_LOCOMO \
-        --seed-program src/programmaticmemory/baselines/no_memory.py \
+        --seed-program src/mstar/baselines/no_memory.py \
         --iterations 0 \
         --output-dir outputs/t1-locomo-no-memory
 
     run "T1: LoCoMo / Vanilla RAG" \
         $COMMON_LOCOMO \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --iterations 0 \
         --output-dir outputs/t1-locomo-vanilla-rag
 
@@ -98,13 +98,13 @@ run_table1() {
     # --- ALFWorld unseen ---
     run "T1: ALFWorld unseen / No Memory" \
         $COMMON_ALFWORLD \
-        --seed-program src/programmaticmemory/baselines/no_memory.py \
+        --seed-program src/mstar/baselines/no_memory.py \
         --iterations 0 \
         --output-dir outputs/t1-alfworld-unseen-no-memory \
         eval_split=unseen
     run "T1: ALFWorld unseen / Vanilla RAG" \
         $COMMON_ALFWORLD \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --iterations 0 \
         --output-dir outputs/t1-alfworld-unseen-vanilla-rag \
         eval_split=unseen
@@ -117,13 +117,13 @@ run_table1() {
     # --- ALFWorld seen ---
     run "T1: ALFWorld seen / No Memory" \
         $COMMON_ALFWORLD \
-        --seed-program src/programmaticmemory/baselines/no_memory.py \
+        --seed-program src/mstar/baselines/no_memory.py \
         --iterations 0 \
         --output-dir outputs/t1-alfworld-seen-no-memory \
         eval_split=seen
     run "T1: ALFWorld seen / Vanilla RAG" \
         $COMMON_ALFWORLD \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --iterations 0 \
         --output-dir outputs/t1-alfworld-seen-vanilla-rag \
         eval_split=seen
@@ -160,7 +160,7 @@ run_baselines() {
         # --- LoCoMo ---
         run "BL: LoCoMo / $slug" \
             $COMMON_LOCOMO \
-            --seed-program src/programmaticmemory/baselines/${file}.py \
+            --seed-program src/mstar/baselines/${file}.py \
             --iterations 0 \
             --output-dir outputs/bl-locomo-${slug} $extra
 
@@ -168,7 +168,7 @@ run_baselines() {
         for SPLIT in unseen seen; do
             run "BL: ALFWorld $SPLIT / $slug" \
                 $COMMON_ALFWORLD \
-                --seed-program src/programmaticmemory/baselines/${file}.py \
+                --seed-program src/mstar/baselines/${file}.py \
                 --iterations 0 \
                 --output-dir outputs/bl-alfworld-${SPLIT}-${slug} \
                 eval_split=$SPLIT $extra
@@ -185,7 +185,7 @@ run_baselines() {
 
             run "BL: $DS_SLUG / $slug" \
                 $COMMON_DS \
-                --seed-program src/programmaticmemory/baselines/${file}.py \
+                --seed-program src/mstar/baselines/${file}.py \
                 --iterations 0 \
                 --output-dir outputs/bl-${DS_SLUG}-${slug} $extra
         done
@@ -223,12 +223,12 @@ run_ablation() {
 
     run "T2: LoCoMo / - Population diversity" \
         $COMMON_LOCOMO $EVOL_LOCOMO \
-        --selection-strategy max --seed-program src/programmaticmemory/seeds/llm_summarizer.py \
+        --selection-strategy max --seed-program src/mstar/seeds/llm_summarizer.py \
         --output-dir outputs/t2-locomo-no-diversity
 }
 
 # GEPA baseline: prompt-only optimization (ALWAYS_ON_KNOWLEDGE).
-# Same data splits, train subsets, scorer, and model params as Engram ours runs.
+# Same data splits, train subsets, scorer, and model params as Mstar ours runs.
 GEPA_COMMON="--task-model $TASK_MODEL --toolkit-model $TOOLKIT_MODEL --embedding-model $EMBED_MODEL --batch-concurrency $BATCH_CONCURRENCY --task-lm-thinking-effort $THINKING_EFFORT --max-proposals 20 --reflection-model $REFLECT_MODEL"
 
 run_gepa() {
@@ -240,14 +240,14 @@ run_gepa() {
     uv run python scripts/run_gepa_baseline.py \
         --dataset locomo --test-size 100 --test-train-ratio 3 \
         $GEPA_COMMON $EVOL_LOCOMO \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --output-dir outputs/gepa-locomo
 
     # --- ALFWorld unseen ---
     uv run python scripts/run_gepa_baseline.py \
         --dataset alfworld --test-size 50 --test-train-ratio 3 \
         $GEPA_COMMON $EVOL_ALF_UNSEEN \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --output-dir outputs/gepa-alfworld-unseen \
         eval_split=unseen
 
@@ -255,7 +255,7 @@ run_gepa() {
     uv run python scripts/run_gepa_baseline.py \
         --dataset alfworld --test-size 50 --test-train-ratio 3 \
         $GEPA_COMMON $EVOL_ALF_SEEN \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --output-dir outputs/gepa-alfworld-seen \
         eval_split=seen
 
@@ -263,28 +263,28 @@ run_gepa() {
     uv run python scripts/run_gepa_baseline.py \
         --dataset healthbench --category health_data_tasks --test-size 100 --test-train-ratio 3 \
         $GEPA_COMMON $EVOL_HB_DATA \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --output-dir outputs/gepa-hb-data-tasks
 
     # --- HealthBench emergency ---
     uv run python scripts/run_gepa_baseline.py \
         --dataset healthbench --category emergency_referrals --test-size 100 --test-train-ratio 3 \
         $GEPA_COMMON $EVOL_HB_EMERG \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --output-dir outputs/gepa-hb-emergency
 
     # --- PRBench legal ---
     uv run python scripts/run_gepa_baseline.py \
         --dataset prbench --category legal --test-size 50 --test-train-ratio 3 \
         $GEPA_COMMON $EVOL_PR_LEGAL \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --output-dir outputs/gepa-pr-legal
 
     # --- PRBench finance ---
     uv run python scripts/run_gepa_baseline.py \
         --dataset prbench --category finance --test-size 50 --test-train-ratio 3 \
         $GEPA_COMMON $EVOL_PR_FIN \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --output-dir outputs/gepa-pr-finance
 }
 

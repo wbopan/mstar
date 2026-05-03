@@ -30,7 +30,7 @@ def enable_llm_disk_cache():
     """
     import litellm
 
-    from programmaticmemory.cache import configure_cache, disable_cache
+    from mstar.cache import configure_cache, disable_cache
 
     cache_dir = str(Path(__file__).parent / ".llm_cache")
     configure_cache("disk", disk_cache_dir=cache_dir)

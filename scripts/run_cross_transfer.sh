@@ -45,9 +45,9 @@ run() {
     echo "================================================================"
     echo "  $label"
     echo "================================================================"
-    echo "  Command: uv run python -m programmaticmemory.evolution $*"
+    echo "  Command: uv run python -m mstar.evolution $*"
     echo ""
-    uv run python -m programmaticmemory.evolution "$@"
+    uv run python -m mstar.evolution "$@"
 }
 
 echo "=============================================================="

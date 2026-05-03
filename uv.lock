@@ -2786,7 +2786,7 @@ wheels = [
 ]
 
 [[package]]
-name = "programmaticmemory"
+name = "mstar"
 version = "1.1.0"
 source = { editable = "." }
 dependencies = [

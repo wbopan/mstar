@@ -14,12 +14,12 @@ import litellm
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from programmaticmemory.evolution.evaluator import (
+from mstar.evolution.evaluator import (
     RUBRIC_GRADER_TEMPLATE,
     RubricValScorer,
     _calculate_rubric_score,
 )
-from programmaticmemory.evolution.types import DataItem
+from mstar.evolution.types import DataItem
 
 # Use the same model as other LLM integration tests
 TASK_MODEL = "openrouter/deepseek/deepseek-v3.2"

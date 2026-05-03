@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from programmaticmemory.benchmarks import prbench as _prbench
+from mstar.benchmarks import prbench as _prbench
 
 _PRBENCH_FIXTURE = [
     {
@@ -106,12 +106,12 @@ def data_dir(tmp_path, monkeypatch):
 
 class TestPRBench:
     def test_register(self):
-        from programmaticmemory.datasets import list_datasets
+        from mstar.datasets import list_datasets
 
         assert "prbench" in list_datasets()
 
     def test_load_returns_dataset(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("prbench", data_dir=data_dir)
         assert len(ds.train) > 0
@@ -119,19 +119,19 @@ class TestPRBench:
         assert ds.val_scorer is not None
 
     def test_category_finance(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("prbench", data_dir=data_dir, category="finance")
         assert len(ds.val) > 0
 
     def test_category_legal(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("prbench", data_dir=data_dir, category="legal")
         assert len(ds.val) > 0
 
     def test_val_has_rubric_in_metadata(self, data_dir):
-        from programmaticmemory.datasets import load_dataset
+        from mstar.datasets import load_dataset
 
         ds = load_dataset("prbench", data_dir=data_dir, category="finance")
         for item in ds.val:

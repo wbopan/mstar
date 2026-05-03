@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from programmaticmemory.benchmarks.nyt_connections import ConnectionsScorer
-from programmaticmemory.evolution.evaluator import TokenF1Scorer
+from mstar.benchmarks.nyt_connections import ConnectionsScorer
+from mstar.evolution.evaluator import TokenF1Scorer
 
 
 class TestTokenF1Scorer:

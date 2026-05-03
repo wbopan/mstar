@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from programmaticmemory.evolution.checkpoint import (
+from mstar.evolution.checkpoint import (
     deserialize_eval_result,
     deserialize_failed_case,
     deserialize_pool_entry,
@@ -12,8 +12,8 @@ from programmaticmemory.evolution.checkpoint import (
     serialize_failed_case,
     serialize_pool_entry,
 )
-from programmaticmemory.evolution.strategies import SplitValidation
-from programmaticmemory.evolution.types import (
+from mstar.evolution.strategies import SplitValidation
+from mstar.evolution.types import (
     DataItem,
     Dataset,
     EvalResult,
@@ -338,7 +338,7 @@ class TestSplitValidationState:
         sv = self._make_instance(ds)
         state = sv.get_state()
         # Patch _embed_texts to avoid API call
-        with patch("programmaticmemory.evolution.strategies._embed_texts", return_value=None):
+        with patch("mstar.evolution.strategies._embed_texts", return_value=None):
             sv2 = SplitValidation.from_state(state, ds)
         assert sv2._static_indices == sv._static_indices
         assert sv2._train_indices == sv._train_indices
@@ -359,7 +359,7 @@ class TestSplitValidationState:
         ds = _make_dataset()
         sv = self._make_instance(ds)
         state = sv.get_state()
-        with patch("programmaticmemory.evolution.strategies._embed_texts", side_effect=Exception("API down")):
+        with patch("mstar.evolution.strategies._embed_texts", side_effect=Exception("API down")):
             sv2 = SplitValidation.from_state(state, ds)
         assert sv2._rotate_embs is None
 
@@ -375,10 +375,8 @@ class TestSplitValidationState:
         ds = _make_dataset()
         sv = self._make_instance(ds)
         state = sv.get_state()
-        with patch("programmaticmemory.evolution.strategies._embed_texts", return_value=None):
+        with patch("mstar.evolution.strategies._embed_texts", return_value=None):
             sv2 = SplitValidation.from_state(state, ds)
         train_items, val_items = sv2.select(ds, iteration=1)
         assert len(train_items) == len(sv._train_indices)
         assert len(val_items) == len(sv._static_indices)
-
-

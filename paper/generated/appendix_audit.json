@@ -1,0 +1,1025 @@
+{
+  "baseline_runs": {
+    "alfworld_seen_no_memory": {
+      "config": {
+        "dataset": "alfworld",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-alfworld-seen-no-memory",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 4,
+        "schema_fields": 1,
+        "total_lines": 35,
+        "uses_chromadb": false,
+        "uses_sqlite": false
+      },
+      "run": "t1-alfworld-seen-no-memory",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "fadc53392deff634",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "alfworld_seen_vector_search": {
+      "config": {
+        "dataset": "alfworld",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-alfworld-seen-vanilla-rag",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 21,
+        "schema_fields": 1,
+        "total_lines": 79,
+        "uses_chromadb": true,
+        "uses_sqlite": false
+      },
+      "run": "t1-alfworld-seen-vanilla-rag",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "b51bed57fd695ec6",
+        "best_validation_score": 0.88,
+        "category_scores": {
+          "look_at_obj_in_light": 1.0,
+          "pick_and_place_simple": 1.0,
+          "pick_clean_then_place_in_recep": 0.4166666666666667,
+          "pick_cool_then_place_in_recep": 1.0,
+          "pick_heat_then_place_in_recep": 0.2857142857142857,
+          "pick_two_obj_and_place": 0.8666666666666667
+        },
+        "extra_metrics": {},
+        "final_score": 0.72,
+        "score_history_len": 1
+      }
+    },
+    "alfworld_unseen_no_memory": {
+      "config": {
+        "dataset": "alfworld",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-alfworld-unseen-no-memory",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 4,
+        "schema_fields": 1,
+        "total_lines": 35,
+        "uses_chromadb": false,
+        "uses_sqlite": false
+      },
+      "run": "t1-alfworld-unseen-no-memory",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "fadc53392deff634",
+        "best_validation_score": 0.76,
+        "category_scores": {
+          "look_at_obj_in_light": 0.8571428571428571,
+          "pick_and_place_simple": 0.9,
+          "pick_and_place_with_movable_recep": 1.0,
+          "pick_clean_then_place_in_recep": 0.8181818181818182,
+          "pick_cool_then_place_in_recep": 0.5714285714285714,
+          "pick_heat_then_place_in_recep": 0.8333333333333334,
+          "pick_two_obj_and_place": 0.625
+        },
+        "extra_metrics": {},
+        "final_score": 0.78,
+        "score_history_len": 1
+      }
+    },
+    "alfworld_unseen_vector_search": {
+      "config": {
+        "dataset": "alfworld",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-alfworld-unseen-vanilla-rag",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 21,
+        "schema_fields": 1,
+        "total_lines": 79,
+        "uses_chromadb": true,
+        "uses_sqlite": false
+      },
+      "run": "t1-alfworld-unseen-vanilla-rag",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "b51bed57fd695ec6",
+        "best_validation_score": 0.88,
+        "category_scores": {
+          "look_at_obj_in_light": 0.8571428571428571,
+          "pick_and_place_simple": 0.7,
+          "pick_and_place_with_movable_recep": 1.0,
+          "pick_clean_then_place_in_recep": 0.6363636363636364,
+          "pick_cool_then_place_in_recep": 0.7142857142857143,
+          "pick_heat_then_place_in_recep": 0.6666666666666666,
+          "pick_two_obj_and_place": 0.625
+        },
+        "extra_metrics": {},
+        "final_score": 0.7,
+        "score_history_len": 1
+      }
+    },
+    "healthbench_data_no_memory": {
+      "config": {
+        "dataset": "healthbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-hb-data-tasks-no-memory",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 4,
+        "schema_fields": 1,
+        "total_lines": 35,
+        "uses_chromadb": false,
+        "uses_sqlite": false
+      },
+      "run": "t1-hb-data-tasks-no-memory",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "fadc53392deff634",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "healthbench_data_vector_search": {
+      "config": {
+        "dataset": "healthbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-hb-data-tasks-vanilla-rag",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 21,
+        "schema_fields": 1,
+        "total_lines": 79,
+        "uses_chromadb": true,
+        "uses_sqlite": false
+      },
+      "run": "t1-hb-data-tasks-vanilla-rag",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "b51bed57fd695ec6",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "healthbench_emergency_no_memory": {
+      "config": {
+        "dataset": "healthbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-hb-emergency-no-memory",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 4,
+        "schema_fields": 1,
+        "total_lines": 35,
+        "uses_chromadb": false,
+        "uses_sqlite": false
+      },
+      "run": "t1-hb-emergency-no-memory",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "fadc53392deff634",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "healthbench_emergency_vector_search": {
+      "config": {
+        "dataset": "healthbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-hb-emergency-vanilla-rag",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 21,
+        "schema_fields": 1,
+        "total_lines": 79,
+        "uses_chromadb": true,
+        "uses_sqlite": false
+      },
+      "run": "t1-hb-emergency-vanilla-rag",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "b51bed57fd695ec6",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "locomo_no_memory": {
+      "config": {
+        "dataset": "locomo",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-locomo-no-memory",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 4,
+        "schema_fields": 1,
+        "total_lines": 35,
+        "uses_chromadb": false,
+        "uses_sqlite": false
+      },
+      "run": "t1-locomo-no-memory",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "fadc53392deff634",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "locomo_vector_search": {
+      "config": {
+        "dataset": "locomo",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-locomo-vanilla-rag",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 21,
+        "schema_fields": 1,
+        "total_lines": 79,
+        "uses_chromadb": true,
+        "uses_sqlite": false
+      },
+      "run": "t1-locomo-vanilla-rag",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "b51bed57fd695ec6",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "prbench_finance_no_memory": {
+      "config": {
+        "dataset": "prbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-pr-finance-no-memory",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 4,
+        "schema_fields": 1,
+        "total_lines": 35,
+        "uses_chromadb": false,
+        "uses_sqlite": false
+      },
+      "run": "t1-pr-finance-no-memory",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "fadc53392deff634",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "prbench_finance_vector_search": {
+      "config": {
+        "dataset": "prbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-pr-finance-vanilla-rag",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 21,
+        "schema_fields": 1,
+        "total_lines": 79,
+        "uses_chromadb": true,
+        "uses_sqlite": false
+      },
+      "run": "t1-pr-finance-vanilla-rag",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "b51bed57fd695ec6",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "prbench_legal_no_memory": {
+      "config": {
+        "dataset": "prbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-pr-legal-no-memory",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 4,
+        "schema_fields": 1,
+        "total_lines": 35,
+        "uses_chromadb": false,
+        "uses_sqlite": false
+      },
+      "run": "t1-pr-legal-no-memory",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "fadc53392deff634",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    },
+    "prbench_legal_vector_search": {
+      "config": {
+        "dataset": "prbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 25,
+        "eval_train_ratio": 5,
+        "evolution_seed": null,
+        "iterations": 0,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-pr-legal-vanilla-rag",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 21,
+        "schema_fields": 1,
+        "total_lines": 79,
+        "uses_chromadb": true,
+        "uses_sqlite": false
+      },
+      "run": "t1-pr-legal-vanilla-rag",
+      "summary": {
+        "best_program_generation": 0,
+        "best_program_hash": "b51bed57fd695ec6",
+        "best_validation_score": 0.0,
+        "category_scores": {},
+        "extra_metrics": {},
+        "final_score": 0.0,
+        "score_history_len": 1
+      }
+    }
+  },
+  "cost_scan": "skipped",
+  "locomo_0459_search": {
+    "summary_hits": [
+      "outputs/t1-hb-emergency-ours/summary.json"
+    ]
+  },
+  "main_runs": {
+    "alfworld_seen": {
+      "config": {
+        "dataset": "alfworld",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 32,
+        "eval_train_ratio": 2,
+        "evolution_seed": null,
+        "iterations": 20,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-alfworld-seen-ours",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 112,
+        "schema_fields": 8,
+        "total_lines": 441,
+        "uses_chromadb": false,
+        "uses_sqlite": true
+      },
+      "run": "t1-alfworld-seen-ours",
+      "summary": {
+        "best_program_generation": 1,
+        "best_program_hash": "e8221bb3aa703f7c",
+        "best_validation_score": 0.84375,
+        "category_scores": {
+          "look_at_obj_in_light": 1.0,
+          "pick_and_place_simple": 1.0,
+          "pick_clean_then_place_in_recep": 0.4166666666666667,
+          "pick_cool_then_place_in_recep": 0.75,
+          "pick_heat_then_place_in_recep": 0.5714285714285714,
+          "pick_two_obj_and_place": 0.8
+        },
+        "extra_metrics": {},
+        "final_score": 0.7,
+        "score_history_len": 23
+      }
+    },
+    "alfworld_unseen": {
+      "config": {
+        "dataset": "alfworld",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 50,
+        "eval_train_ratio": 2,
+        "evolution_seed": null,
+        "iterations": 20,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-alfworld-unseen-ours",
+      "program": {
+        "llm_in_read": true,
+        "logic_lines_approx": 159,
+        "schema_fields": 8,
+        "total_lines": 276,
+        "uses_chromadb": false,
+        "uses_sqlite": true
+      },
+      "run": "t1-alfworld-unseen-ours",
+      "summary": {
+        "best_program_generation": 1,
+        "best_program_hash": "5458c93b8cb41b3c",
+        "best_validation_score": 0.98,
+        "category_scores": {
+          "look_at_obj_in_light": 1.0,
+          "pick_and_place_simple": 0.9,
+          "pick_and_place_with_movable_recep": 1.0,
+          "pick_clean_then_place_in_recep": 0.9090909090909091,
+          "pick_cool_then_place_in_recep": 1.0,
+          "pick_heat_then_place_in_recep": 0.8333333333333334,
+          "pick_two_obj_and_place": 0.75
+        },
+        "extra_metrics": {},
+        "final_score": 0.9,
+        "score_history_len": 23
+      }
+    },
+    "healthbench_data": {
+      "config": {
+        "dataset": "healthbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 60,
+        "eval_train_ratio": 2,
+        "evolution_seed": null,
+        "iterations": 20,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-hb-data-tasks-ours",
+      "program": {
+        "llm_in_read": true,
+        "logic_lines_approx": 143,
+        "schema_fields": 12,
+        "total_lines": 769,
+        "uses_chromadb": true,
+        "uses_sqlite": true
+      },
+      "run": "t1-hb-data-tasks-ours",
+      "summary": {
+        "best_program_generation": 3,
+        "best_program_hash": "21239040b66e25e6",
+        "best_validation_score": 0.4240918460481112,
+        "category_scores": {
+          "health_data_tasks": 0.38981464112188813
+        },
+        "extra_metrics": {},
+        "final_score": 0.38981464112188813,
+        "score_history_len": 23
+      }
+    },
+    "healthbench_emergency": {
+      "config": {
+        "dataset": "healthbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 60,
+        "eval_train_ratio": 2,
+        "evolution_seed": null,
+        "iterations": 20,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-hb-emergency-ours",
+      "program": {
+        "llm_in_read": true,
+        "logic_lines_approx": 124,
+        "schema_fields": 7,
+        "total_lines": 393,
+        "uses_chromadb": false,
+        "uses_sqlite": true
+      },
+      "run": "t1-hb-emergency-ours",
+      "summary": {
+        "best_program_generation": 2,
+        "best_program_hash": "f532fd6815543c59",
+        "best_validation_score": 0.5180362370881545,
+        "category_scores": {
+          "emergency_referrals": 0.4926741919200289
+        },
+        "extra_metrics": {},
+        "final_score": 0.4926741919200289,
+        "score_history_len": 23
+      }
+    },
+    "locomo": {
+      "config": {
+        "dataset": "locomo",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 60,
+        "eval_train_ratio": 2,
+        "evolution_seed": null,
+        "iterations": 20,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 100,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-locomo-ours",
+      "program": {
+        "llm_in_read": false,
+        "logic_lines_approx": 171,
+        "schema_fields": 7,
+        "total_lines": 425,
+        "uses_chromadb": true,
+        "uses_sqlite": true
+      },
+      "run": "t1-locomo-ours",
+      "summary": {
+        "best_program_generation": 2,
+        "best_program_hash": "f1ed1724101265c5",
+        "best_validation_score": 0.33292377959398334,
+        "category_scores": {
+          "1": 0.325,
+          "2": 0.194,
+          "3": 0.347,
+          "4": 0.514
+        },
+        "extra_metrics": {
+          "em": 0.29
+        },
+        "final_score": 0.408,
+        "score_history_len": 23
+      }
+    },
+    "prbench_finance": {
+      "config": {
+        "dataset": "prbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 50,
+        "eval_train_ratio": 2,
+        "evolution_seed": null,
+        "iterations": 20,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-pr-finance-ours",
+      "program": {
+        "llm_in_read": true,
+        "logic_lines_approx": 254,
+        "schema_fields": 10,
+        "total_lines": 509,
+        "uses_chromadb": true,
+        "uses_sqlite": true
+      },
+      "run": "t1-pr-finance-ours",
+      "summary": {
+        "best_program_generation": 2,
+        "best_program_hash": "c00c9960aa865f41",
+        "best_validation_score": 0.5207694826644262,
+        "category_scores": {
+          "finance": 0.5858262225394509
+        },
+        "extra_metrics": {},
+        "final_score": 0.5858262225394509,
+        "score_history_len": 23
+      }
+    },
+    "prbench_legal": {
+      "config": {
+        "dataset": "prbench",
+        "dataset_kwargs": null,
+        "eval_rotate_size": 5,
+        "eval_static_size": 50,
+        "eval_train_ratio": 2,
+        "evolution_seed": null,
+        "iterations": 20,
+        "judge_model": null,
+        "reflect_model": "azure/gpt-5.3-codex",
+        "seed": 42,
+        "task_model": "azure/gpt-5.4-mini",
+        "test_size": 50,
+        "toolkit_model": "azure/gpt-5.4-mini"
+      },
+      "cost": {
+        "skipped": true
+      },
+      "path": "outputs/t1-pr-legal-ours",
+      "program": {
+        "llm_in_read": true,
+        "logic_lines_approx": 568,
+        "schema_fields": 22,
+        "total_lines": 1184,
+        "uses_chromadb": true,
+        "uses_sqlite": true
+      },
+      "run": "t1-pr-legal-ours",
+      "summary": {
+        "best_program_generation": 4,
+        "best_program_hash": "5668455f356c479a",
+        "best_validation_score": 0.5898977228040669,
+        "category_scores": {
+          "legal": 0.65999308220656
+        },
+        "extra_metrics": {},
+        "final_score": 0.65999308220656,
+        "score_history_len": 23
+      }
+    }
+  },
+  "paper_values": {
+    "appendix_structural": {
+      "alfworld_unseen": 0.881,
+      "healthbench_data": 0.39,
+      "healthbench_emergency": 0.493,
+      "locomo": 0.408,
+      "prbench_finance": 0.586,
+      "prbench_legal": 0.66
+    },
+    "main_results": {
+      "alfworld_seen": 0.7,
+      "alfworld_unseen": 0.881,
+      "healthbench_data": 0.39,
+      "healthbench_emergency": 0.493,
+      "locomo_f1": 0.459,
+      "locomo_llm_judge": 0.61,
+      "prbench_finance": 0.586,
+      "prbench_legal": 0.66
+    }
+  },
+  "stability": {
+    "healthbench_data": {
+      "cv_percent": 5.2973434443545235,
+      "mean": 0.3904527173926698,
+      "missing_runs": [],
+      "runs": [
+        {
+          "best_program_hash": "21239040b66e25e6",
+          "best_validation_score": 0.4240918460481112,
+          "final_score": 0.38981464112188813,
+          "run": "t1-hb-data-tasks-ours"
+        },
+        {
+          "best_program_hash": "8efc8492c7a768e2",
+          "best_validation_score": 0.3814174898500816,
+          "final_score": 0.3818480739088791,
+          "run": "stability-hb-data-eseed1"
+        },
+        {
+          "best_program_hash": "020b7336677ff7b0",
+          "best_validation_score": 0.37751674402081814,
+          "final_score": 0.35670175073831084,
+          "run": "stability-hb-data-eseed2"
+        },
+        {
+          "best_program_hash": "385efa246050b35a",
+          "best_validation_score": 0.39692659315133105,
+          "final_score": 0.4111565724267088,
+          "run": "stability-hb-data-eseed3"
+        },
+        {
+          "best_program_hash": "a62fcdbcd4ff4907",
+          "best_validation_score": 0.37951710355912444,
+          "final_score": 0.412742548767562,
+          "run": "stability-hb-data-eseed4"
+        }
+      ],
+      "std": 0.020683621428104686
+    },
+    "locomo": {
+      "cv_percent": 7.910140105319731,
+      "mean": 0.4104586530627884,
+      "missing_runs": [],
+      "runs": [
+        {
+          "best_program_hash": "f1ed1724101265c5",
+          "best_validation_score": 0.33292377959398334,
+          "final_score": 0.408,
+          "run": "t1-locomo-ours"
+        },
+        {
+          "best_program_hash": "9f4f1cebd512e825",
+          "best_validation_score": 0.27258311133311136,
+          "final_score": 0.46273411446794627,
+          "run": "stability-locomo-eseed1"
+        },
+        {
+          "best_program_hash": "ec19a12346a8f8a6",
+          "best_validation_score": 0.2888588753294636,
+          "final_score": 0.3644122028866274,
+          "run": "stability-locomo-eseed2"
+        },
+        {
+          "best_program_hash": "ec8f2e82ca737857",
+          "best_validation_score": 0.31236416361416364,
+          "final_score": 0.3943492749641289,
+          "run": "stability-locomo-eseed3"
+        },
+        {
+          "best_program_hash": "04073eaf929ff7f3",
+          "best_validation_score": 0.3332228273675642,
+          "final_score": 0.4227976729952394,
+          "run": "stability-locomo-eseed4"
+        }
+      ],
+      "std": 0.0324678545316748
+    },
+    "prbench_finance": {
+      "cv_percent": 3.2781035745531004,
+      "mean": 0.5706633653974453,
+      "missing_runs": [
+        "stability-pr-finance-eseed3",
+        "stability-pr-finance-eseed4"
+      ],
+      "runs": [
+        {
+          "best_program_hash": "c00c9960aa865f41",
+          "best_validation_score": 0.5207694826644262,
+          "final_score": 0.5858262225394509,
+          "run": "t1-pr-finance-ours"
+        },
+        {
+          "best_program_hash": "f4b71f74ec5aba12",
+          "best_validation_score": 0.5217785977346965,
+          "final_score": 0.5443072194033042,
+          "run": "stability-pr-finance-eseed1"
+        },
+        {
+          "best_program_hash": "a71628c5aee615ab",
+          "best_validation_score": 0.5585354585264427,
+          "final_score": 0.5818566542495808,
+          "run": "stability-pr-finance-eseed2"
+        },
+        {
+          "missing": true,
+          "run": "stability-pr-finance-eseed3"
+        },
+        {
+          "missing": true,
+          "run": "stability-pr-finance-eseed4"
+        }
+      ],
+      "std": 0.018706936179758677
+    }
+  },
+  "warnings": [
+    "LoCoMo main-table value 0.459 differs from output final score 0.408.",
+    "PRBench Finance stability table uses five seeds, but local outputs are missing: stability-pr-finance-eseed3, stability-pr-finance-eseed4.",
+    "ALFWorld Seen final summary has no movable-receptacle category; appendix category table should explain the 46/50 displayed count.",
+    "Cost scan skipped in quick mode; run with --with-cost before regenerating the cost table."
+  ]
+}

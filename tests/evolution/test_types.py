@@ -2,7 +2,7 @@
 
 import pytest
 
-from programmaticmemory.evolution.types import (
+from mstar.evolution.types import (
     DataItem,
     Dataset,
     EvalResult,
@@ -304,7 +304,7 @@ class TestProgramPool:
 
 class TestSoftmaxSelection:
     def test_weights_favor_higher_scores(self):
-        from programmaticmemory.evolution.types import SoftmaxSelection
+        from mstar.evolution.types import SoftmaxSelection
 
         strategy = SoftmaxSelection(temperature=0.15)
         entries = [
@@ -315,7 +315,7 @@ class TestSoftmaxSelection:
         assert weights[0] > weights[1]
 
     def test_sample_returns_pool_entry(self):
-        from programmaticmemory.evolution.types import SoftmaxSelection
+        from mstar.evolution.types import SoftmaxSelection
 
         strategy = SoftmaxSelection(temperature=0.15)
         entries = [
@@ -330,7 +330,7 @@ class TestSoftmaxSelection:
         import random as _random
         from collections import Counter
 
-        from programmaticmemory.evolution.types import SoftmaxSelection
+        from mstar.evolution.types import SoftmaxSelection
 
         _random.seed(42)
         strategy = SoftmaxSelection(temperature=0.15)
@@ -359,7 +359,7 @@ class TestSoftmaxSelection:
             assert abs(empirical_p - exp_p) < 0.05, f"{label}: expected {exp_p:.3f}, got {empirical_p:.3f}"
 
     def test_repr(self):
-        from programmaticmemory.evolution.types import SoftmaxSelection
+        from mstar.evolution.types import SoftmaxSelection
 
         strategy = SoftmaxSelection(temperature=0.15)
         assert repr(strategy) == "SoftmaxSelection(T=0.15)"
@@ -367,7 +367,7 @@ class TestSoftmaxSelection:
 
 class TestMaxSelection:
     def test_always_selects_highest_score(self):
-        from programmaticmemory.evolution.types import MaxSelection
+        from mstar.evolution.types import MaxSelection
 
         strategy = MaxSelection()
         entries = [
@@ -381,7 +381,7 @@ class TestMaxSelection:
             assert result.program.source_code == "best"
 
     def test_weights_are_zero_except_max(self):
-        from programmaticmemory.evolution.types import MaxSelection
+        from mstar.evolution.types import MaxSelection
 
         strategy = MaxSelection()
         entries = [
@@ -393,7 +393,7 @@ class TestMaxSelection:
         assert weights == [0.0, 1.0, 0.0]
 
     def test_ties_give_equal_weight(self):
-        from programmaticmemory.evolution.types import MaxSelection
+        from mstar.evolution.types import MaxSelection
 
         strategy = MaxSelection()
         entries = [
@@ -405,7 +405,7 @@ class TestMaxSelection:
         assert weights == [1.0, 1.0, 0.0]
 
     def test_repr(self):
-        from programmaticmemory.evolution.types import MaxSelection
+        from mstar.evolution.types import MaxSelection
 
         strategy = MaxSelection()
         assert repr(strategy) == "MaxSelection()"
@@ -413,7 +413,7 @@ class TestMaxSelection:
 
 class TestRecencyDecaySelection:
     def test_weights_decay_by_generation(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         strategy = RecencyDecaySelection(decay_rate=0.8)
         entries = [
@@ -424,7 +424,7 @@ class TestRecencyDecaySelection:
         assert weights[1] > weights[0]  # newer has higher weight despite lower score
 
     def test_weights_ignore_score(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         strategy = RecencyDecaySelection(decay_rate=0.8)
         entries = [
@@ -437,7 +437,7 @@ class TestRecencyDecaySelection:
     def test_weights_values(self):
         import math
 
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         strategy = RecencyDecaySelection(decay_rate=0.8)
         entries = [
@@ -449,7 +449,7 @@ class TestRecencyDecaySelection:
         assert math.isclose(weights[1], 0.8**3)
 
     def test_sample_returns_pool_entry(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         strategy = RecencyDecaySelection(decay_rate=0.8)
         entries = [
@@ -459,7 +459,7 @@ class TestRecencyDecaySelection:
         assert isinstance(result, PoolEntry)
 
     def test_repr(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         strategy = RecencyDecaySelection(decay_rate=0.8)
         assert repr(strategy) == "RecencyDecaySelection(decay=0.8)"
@@ -475,25 +475,25 @@ class TestSelectionStrategyValidation:
             SoftmaxSelection(temperature=-0.5)
 
     def test_recency_decay_rejects_zero(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         with pytest.raises(ValueError, match="decay_rate must be in"):
             RecencyDecaySelection(decay_rate=0)
 
     def test_recency_decay_rejects_negative(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         with pytest.raises(ValueError, match="decay_rate must be in"):
             RecencyDecaySelection(decay_rate=-0.5)
 
     def test_recency_decay_rejects_greater_than_one(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         with pytest.raises(ValueError, match="decay_rate must be in"):
             RecencyDecaySelection(decay_rate=1.5)
 
     def test_recency_decay_accepts_one(self):
-        from programmaticmemory.evolution.types import RecencyDecaySelection
+        from mstar.evolution.types import RecencyDecaySelection
 
         strategy = RecencyDecaySelection(decay_rate=1.0)
         assert strategy.decay_rate == 1.0
@@ -555,7 +555,7 @@ class TestProgramPoolSummary:
 
     def test_summary_with_max_selection(self):
         """Ensure summary works with MaxSelection (non-softmax weights)."""
-        from programmaticmemory.evolution.types import MaxSelection
+        from mstar.evolution.types import MaxSelection
 
         pool = ProgramPool(strategy=MaxSelection())
         pool.add(KBProgram(source_code="best"), EvalResult(score=0.9))

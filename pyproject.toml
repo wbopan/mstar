@@ -3,11 +3,11 @@ requires = ["setuptools>=77.0.1", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "programmaticmemory"
+name = "mstar"
 version = "1.1.0"
 description = "A framework for optimizing text components using LLM-based reflection and edit-based mutation with memory stores."
-readme = "README.md"
-license = { text = "Apache-2.0" }
+readme = "docs/README.md"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 
 dependencies = [
@@ -51,7 +51,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-programmaticmemory = ["py.typed"]
+mstar = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -106,7 +106,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
-known-first-party = ["programmaticmemory"]
+known-first-party = ["mstar"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"

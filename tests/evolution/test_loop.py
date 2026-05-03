@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from programmaticmemory.evolution.evaluator import ExactMatchScorer, MemoryEvaluator
-from programmaticmemory.evolution.loop import EvolutionLoop
-from programmaticmemory.evolution.prompts import INITIAL_KB_PROGRAM
-from programmaticmemory.evolution.reflector import ReflectionResult, Reflector
-from programmaticmemory.evolution.sandbox import CompileError, compile_kb_program
-from programmaticmemory.evolution.types import DataItem, Dataset, EvalResult, FailedCase, KBProgram
+from mstar.evolution.evaluator import ExactMatchScorer, MemoryEvaluator
+from mstar.evolution.loop import EvolutionLoop
+from mstar.evolution.prompts import INITIAL_KB_PROGRAM
+from mstar.evolution.reflector import ReflectionResult, Reflector
+from mstar.evolution.sandbox import CompileError, compile_kb_program
+from mstar.evolution.types import DataItem, Dataset, EvalResult, FailedCase, KBProgram
 
 
 class MockStrategy:
@@ -376,7 +376,6 @@ class TestEvolutionLoopRuntimeFix:
         assert state.best_score == 0.7
 
 
-
 class TestFinalEvaluation:
     def test_final_eval_runs_when_strategy_provides_data(self):
         """FixedRepresentative-like strategy triggers final evaluation."""
@@ -474,7 +473,7 @@ class TestFreezeInstructions:
 
 
 class TestLoopSkipMetrics:
-    @patch("programmaticmemory.evolution.loop.compile_kb_program")
+    @patch("mstar.evolution.loop.compile_kb_program")
     def test_freeze_instructions_failure_logs_skipped(self, mock_compile):
         """freeze_instructions compile failure should be logged as skipped iteration."""
         mock_compile.return_value = CompileError("Compile failed", "bad patch")
@@ -511,7 +510,7 @@ class TestLoopSkipMetrics:
             iteration=1,
         )
 
-    @patch("programmaticmemory.evolution.loop.compile_kb_program")
+    @patch("mstar.evolution.loop.compile_kb_program")
     def test_freeze_code_failure_logs_skipped(self, mock_compile):
         """freeze_code compile failure should be logged as skipped iteration."""
         mock_compile.return_value = CompileError("Compile failed", "bad patch")

@@ -26,9 +26,9 @@ run() {
     echo "================================================================"
     echo "  SMOKE: $label"
     echo "================================================================"
-    echo "  Command: uv run python -m programmaticmemory.evolution $*"
+    echo "  Command: uv run python -m mstar.evolution $*"
     echo ""
-    uv run python -m programmaticmemory.evolution "$@"
+    uv run python -m mstar.evolution "$@"
 }
 
 run_table1() {
@@ -39,12 +39,12 @@ run_table1() {
     # --- LoCoMo ---
     run "T1: LoCoMo / No Memory" \
         $COMMON_LOCOMO \
-        --seed-program src/programmaticmemory/baselines/no_memory.py \
+        --seed-program src/mstar/baselines/no_memory.py \
         --iterations 0
 
     run "T1: LoCoMo / Vanilla RAG" \
         $COMMON_LOCOMO \
-        --seed-program src/programmaticmemory/seeds/vector_search.py \
+        --seed-program src/mstar/seeds/vector_search.py \
         --iterations 0
 
     run "T1: LoCoMo / Ours (evolution)" \
@@ -55,13 +55,13 @@ run_table1() {
     for SPLIT in unseen seen; do
         run "T1: ALFWorld $SPLIT / No Memory" \
             $COMMON_ALFWORLD \
-            --seed-program src/programmaticmemory/baselines/no_memory.py \
+            --seed-program src/mstar/baselines/no_memory.py \
             --iterations 0 \
             eval_split=$SPLIT
 
         run "T1: ALFWorld $SPLIT / Vanilla RAG" \
             $COMMON_ALFWORLD \
-            --seed-program src/programmaticmemory/seeds/vector_search.py \
+            --seed-program src/mstar/seeds/vector_search.py \
             --iterations 0 \
             eval_split=$SPLIT
 
@@ -82,12 +82,12 @@ run_table1() {
 
         run "T1: $DS_LABEL / No Memory" \
             $COMMON_DS \
-            --seed-program src/programmaticmemory/baselines/no_memory.py \
+            --seed-program src/mstar/baselines/no_memory.py \
             --iterations 0
 
         run "T1: $DS_LABEL / Vanilla RAG" \
             $COMMON_DS \
-            --seed-program src/programmaticmemory/seeds/vector_search.py \
+            --seed-program src/mstar/seeds/vector_search.py \
             --iterations 0
 
         run "T1: $DS_LABEL / Ours (evolution)" \
@@ -116,14 +116,14 @@ run_baselines() {
         # --- LoCoMo ---
         run "BL: LoCoMo / $label" \
             $COMMON_LOCOMO \
-            --seed-program src/programmaticmemory/baselines/${file}.py \
+            --seed-program src/mstar/baselines/${file}.py \
             --iterations 0 $extra
 
         # --- ALFWorld (both splits) ---
         for SPLIT in unseen seen; do
             run "BL: ALFWorld $SPLIT / $label" \
                 $COMMON_ALFWORLD \
-                --seed-program src/programmaticmemory/baselines/${file}.py \
+                --seed-program src/mstar/baselines/${file}.py \
                 --iterations 0 \
                 eval_split=$SPLIT $extra
         done
@@ -139,7 +139,7 @@ run_baselines() {
 
             run "BL: $DS_LABEL / $label" \
                 $COMMON_DS \
-                --seed-program src/programmaticmemory/baselines/${file}.py \
+                --seed-program src/mstar/baselines/${file}.py \
                 --iterations 0 $extra
         done
     done

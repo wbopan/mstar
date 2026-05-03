@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from programmaticmemory.evolution.azure_config import (
+from mstar.evolution.azure_config import (
     _has_azure_prefix,
     configure_azure_auth,
 )
@@ -38,7 +38,7 @@ class TestHasAzurePrefix:
 class TestConfigureAzureAuth:
     def test_no_op_when_no_azure_models(self):
         """configure_azure_auth should do nothing when no azure/ models."""
-        with patch("programmaticmemory.evolution.azure_config.litellm") as mock_litellm:
+        with patch("mstar.evolution.azure_config.litellm") as mock_litellm:
             configure_azure_auth(["openai/gpt-4"])
             # No attributes should be set on litellm
             assert not mock_litellm.api_base.called
@@ -51,7 +51,7 @@ class TestConfigureAzureAuth:
 
     def test_sets_api_base_when_azure_model_present(self):
         """litellm.api_base should be set to the provided azure_api_base."""
-        with patch("programmaticmemory.evolution.azure_config.litellm") as mock_litellm:
+        with patch("mstar.evolution.azure_config.litellm") as mock_litellm:
             with patch.dict("os.environ", {"AZURE_API_KEY": "test-key"}):
                 configure_azure_auth(
                     ["azure/gpt-4o"],
@@ -61,7 +61,7 @@ class TestConfigureAzureAuth:
 
     def test_sets_api_version_when_azure_model_present(self):
         """litellm.api_version should be set to the provided version."""
-        with patch("programmaticmemory.evolution.azure_config.litellm") as mock_litellm:
+        with patch("mstar.evolution.azure_config.litellm") as mock_litellm:
             with patch.dict("os.environ", {"AZURE_API_KEY": "test-key"}):
                 configure_azure_auth(
                     ["azure/gpt-4o"],
@@ -72,10 +72,11 @@ class TestConfigureAzureAuth:
 
     def test_enables_token_refresh_when_no_api_key(self):
         """enable_azure_ad_token_refresh should be True when AZURE_API_KEY not set."""
-        with patch("programmaticmemory.evolution.azure_config.litellm") as mock_litellm:
+        with patch("mstar.evolution.azure_config.litellm") as mock_litellm:
             with patch.dict("os.environ", {}, clear=True):
                 # Ensure AZURE_API_KEY is not present
                 import os
+
                 os.environ.pop("AZURE_API_KEY", None)
                 configure_azure_auth(
                     ["azure/gpt-4o"],
@@ -85,19 +86,21 @@ class TestConfigureAzureAuth:
 
     def test_skips_token_refresh_when_api_key_set(self):
         """enable_azure_ad_token_refresh should NOT be set when AZURE_API_KEY is present."""
-        with patch("programmaticmemory.evolution.azure_config.litellm") as mock_litellm:
+        with patch("mstar.evolution.azure_config.litellm") as mock_litellm:
             with patch.dict("os.environ", {"AZURE_API_KEY": "my-secret-key"}):
                 configure_azure_auth(
                     ["azure/gpt-4o"],
                     azure_api_base="https://myresource.openai.azure.com/",
                 )
             # enable_azure_ad_token_refresh should not have been set
-            assert not hasattr(mock_litellm, "enable_azure_ad_token_refresh") or \
-                mock_litellm.enable_azure_ad_token_refresh != True  # noqa: E712
+            assert (
+                not hasattr(mock_litellm, "enable_azure_ad_token_refresh")
+                or mock_litellm.enable_azure_ad_token_refresh != True
+            )
 
     def test_uses_default_api_version(self):
         """Default api_version should be '2024-12-01-preview'."""
-        with patch("programmaticmemory.evolution.azure_config.litellm") as mock_litellm:
+        with patch("mstar.evolution.azure_config.litellm") as mock_litellm:
             with patch.dict("os.environ", {"AZURE_API_KEY": "test-key"}):
                 configure_azure_auth(
                     ["azure/gpt-4o"],

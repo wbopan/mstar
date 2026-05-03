@@ -2,9 +2,9 @@
 
 ## Project
 
-**Engram** — "Memory Is a Program: Evolving Agent Memory Through Executable Code Search".
+**Mstar** — "Memory Is a Program: Evolving Agent Memory Through Executable Code Search".
 
-Engram evolves *how* an LLM agent organizes and retrieves information. The memory strategy is a Python program (a **KBProgram**) that defines data schemas, storage logic (`write`), and retrieval logic (`read`). Evolution mutates this program via LLM reflection, guided by benchmark performance. The task agent itself is fixed; only the KBProgram changes.
+Mstar evolves *how* an LLM agent organizes and retrieves information. The memory strategy is a Python program (a **KBProgram**) that defines data schemas, storage logic (`write`), and retrieval logic (`read`). Evolution mutates this program via LLM reflection, guided by benchmark performance. The task agent itself is fixed; only the KBProgram changes.
 
 **Core selling points:**
 1. **Open search space** — searches over executable Python code (arbitrary data structures + logic), not a closed set of module choices or NL rules.
@@ -12,7 +12,7 @@ Engram evolves *how* an LLM agent organizes and retrieves information. The memor
 
 ## Repository Structure
 
-- `src/programmaticmemory/` — Main source code
+- `src/mstar/` — Main source code
 - `paper/` — LaTeX paper (git submodule). Main file: `main.tex` (not `neurips_2025.tex`). Sections in `sections/`.
 - `TASKS.md` — Task board
 
@@ -39,21 +39,21 @@ uv run ruff check src/ && uv run ruff format src/
 
 ```bash
 # Run evolution (LoCoMo, 10 iterations, split validation)
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset locomo --iterations 10 \
   --eval-strategy split --eval-static-size 60
 
 # Evaluate a baseline (no evolution, test only)
-uv run python -m programmaticmemory.evolution \
-  --dataset locomo --seed-program src/programmaticmemory/baselines/dynamic_cheatsheet.py \
+uv run python -m mstar.evolution \
+  --dataset locomo --seed-program src/mstar/baselines/dynamic_cheatsheet.py \
   --iterations 0 --eval-strategy none --test-size 100
 
 # Quick dev iteration (fast, single conversation)
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset mini_locomo --iterations 3 --no-weave
 
 # Resume an interrupted run
-uv run python -m programmaticmemory.evolution --resume outputs/<run-dir>/
+uv run python -m mstar.evolution --resume outputs/<run-dir>/
 
 # Run experiment scripts
 bash scripts/run_experiments.sh table1
@@ -72,7 +72,7 @@ cd paper && latexmk -pdf main.tex && open main.pdf
 | `--eval-static-size` | Static val subset for scoring in split strategy | 25 |
 | `--eval-rotate-size` | Rotating val sample for reflection in split strategy | 5 |
 | `--eval-train-ratio` | Train items per val item during evolution | 5 |
-| `--seed-program` | Path to .py file or directory of seeds | `src/programmaticmemory/seeds/` |
+| `--seed-program` | Path to .py file or directory of seeds | `src/mstar/seeds/` |
 | `--task-model` | LLM for task agent (JSON extraction, QA) | `openrouter/deepseek/deepseek-v3.2` |
 | `--reflect-model` | LLM for code reflection/mutation | `openrouter/openai/gpt-5.3-codex` |
 | `--toolkit-model` | LLM available inside KB programs via `toolkit.llm_completion()` | task-model |
@@ -133,7 +133,7 @@ Val evaluation is two-phase:
 - LLM budget: reset per write/read call (default 1 call, configurable via `--toolkit-budget`)
 - Allowed imports: `json`, `re`, `math`, `hashlib`, `collections`, `dataclasses`, `typing`, `datetime`, `textwrap`, `sqlite3`, `chromadb`
 
-### Module Map (`src/programmaticmemory/evolution/`)
+### Module Map (`src/mstar/evolution/`)
 
 | Module | Role |
 |--------|------|
@@ -150,7 +150,7 @@ Val evaluation is two-phase:
 | `batching.py` | K-means clustering + facility location for representative val/train selection |
 | `__main__.py` | CLI entry point |
 
-### Benchmarks (`src/programmaticmemory/benchmarks/`)
+### Benchmarks (`src/mstar/benchmarks/`)
 
 | Module | Scorer | Train type | Notes |
 |--------|--------|------------|-------|
@@ -161,9 +161,9 @@ Val evaluation is two-phase:
 | `mini_locomo.py` | TokenF1 | `raw_text` | Single-conv subset for dev |
 | `kv_memory.py` | ExactMatch | `raw_text` | Toy benchmark |
 
-### Baselines (`src/programmaticmemory/baselines/`)
+### Baselines (`src/mstar/baselines/`)
 
-Evaluate with `--seed-program src/programmaticmemory/baselines/<name>.py --iterations 0`:
+Evaluate with `--seed-program src/mstar/baselines/<name>.py --iterations 0`:
 
 `no_memory.py`, `vanilla_rag.py`, `trajectory_retrieval.py`, `reasoning_bank.py`, `dynamic_cheatsheet.py`, `g_memory.py`, `mem0.py`, `awm.py`
 

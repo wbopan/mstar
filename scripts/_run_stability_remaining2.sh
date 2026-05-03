@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Resume HB-data eseed=1 from checkpoint, then run remaining experiments
 set -euo pipefail
-cd /Users/panwenbo/Documents/Projects/ProgrammaticMemory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
 
 # Workaround: .pth editable install not being processed by Python in this venv.
-# Explicitly add src/ to PYTHONPATH so `python -m programmaticmemory.evolution` works.
+# Explicitly add src/ to PYTHONPATH so `python -m mstar.evolution` works.
 export PYTHONPATH="${PWD}/src${PYTHONPATH:+:$PYTHONPATH}"
 
 TASK_MODEL=azure/gpt-5.4-mini
@@ -20,7 +22,7 @@ run() {
     echo "================================================================"
     echo "  $label"
     echo "================================================================"
-    uv run python -m programmaticmemory.evolution "$@"
+    uv run python -m mstar.evolution "$@"
 }
 
 # 1. Resume HB Data eseed=1 (crashed at iter 18/20)

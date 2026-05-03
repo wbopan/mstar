@@ -6,15 +6,15 @@ from unittest.mock import MagicMock, patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from programmaticmemory.evolution.prompts import ReflectionPromptConfig
-from programmaticmemory.evolution.reflector import (
+from mstar.evolution.prompts import ReflectionPromptConfig
+from mstar.evolution.reflector import (
     Reflector,
     _extract_commit_message,
     _extract_full_code,
     _extract_patch,
 )
-from programmaticmemory.evolution.sandbox import CompileError, SmokeTestResult
-from programmaticmemory.evolution.types import EvalResult, FailedCase, KBProgram
+from mstar.evolution.sandbox import CompileError, SmokeTestResult
+from mstar.evolution.types import EvalResult, FailedCase, KBProgram
 
 
 class TestExtractPatch:
@@ -155,10 +155,10 @@ class TestExtractCommitMessage:
 
 
 class TestReflector:
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_successful_reflection(
         self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch, snapshot: SnapshotAssertion
     ):
@@ -220,7 +220,7 @@ class KnowledgeBase:
         assert "self.store" in child.program.source_code
         assert mock_litellm.call_args.kwargs["messages"] == snapshot
 
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_reflection_no_code_block_returns_none(self, mock_litellm, snapshot: SnapshotAssertion):
         """If LLM output has no code block, enters fix loop then returns None."""
         mock_resp = MagicMock()
@@ -240,7 +240,7 @@ class KnowledgeBase:
         # Snapshot the first (reflection) call's messages
         assert mock_litellm.call_args_list[0].kwargs["messages"] == snapshot
 
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_reflection_passes_failed_cases(self, mock_litellm, snapshot: SnapshotAssertion):
         """Verify the reflection prompt includes failed case info."""
         captured_messages = []
@@ -288,10 +288,10 @@ class KnowledgeBase:
         assert "Stored: X=42" not in user_content
         assert captured_messages == snapshot
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_reflection_uses_configured_model(
         self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch, snapshot: SnapshotAssertion
     ):
@@ -324,7 +324,7 @@ class KnowledgeBase:
         assert "temperature" not in captured_kwargs[0]
         assert [kw["messages"] for kw in captured_kwargs] == snapshot
 
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_prompt_config_limits_failed_cases(self, mock_litellm, snapshot: SnapshotAssertion):
         """ReflectionPromptConfig.max_failed_cases limits how many cases appear in the prompt."""
         captured_messages = []
@@ -360,7 +360,7 @@ class KnowledgeBase:
         assert case_count == 2
         assert captured_messages == snapshot
 
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_reflection_passes_success_cases(self, mock_litellm, snapshot: SnapshotAssertion):
         """Verify the reflection prompt includes success case info."""
         captured_messages = []
@@ -405,10 +405,10 @@ class KnowledgeBase:
         assert "Preserve the behavior" in user_content
         assert captured_messages == snapshot
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_reflect_and_mutate_empty_choices_returns_none(
         self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch
     ):
@@ -428,10 +428,10 @@ class KnowledgeBase:
 
         assert result is None
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_reflect_and_mutate_none_content_returns_none(
         self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch
     ):
@@ -455,10 +455,10 @@ class KnowledgeBase:
 class TestReflectorPatchFormatRecovery:
     """Tests for patch format failure recovery via the fix loop."""
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_no_patch_enters_fix_loop_and_succeeds(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """When reflection output has no patch, fix loop retries and succeeds."""
         good_code = "class KnowledgeItem: pass\nclass Query: pass\nclass KnowledgeBase: pass"
@@ -490,9 +490,9 @@ class TestReflectorPatchFormatRecovery:
         assert child is not None
         assert mock_litellm.call_count == 2  # reflection + 1 fix
 
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_full_code_fallback_skips_fix_loop(self, mock_litellm, mock_compile, mock_smoke):
         """When reflection output has no patch but has a ```python block, use it directly."""
         good_code = (
@@ -524,7 +524,7 @@ class TestReflectorPatchFormatRecovery:
         assert child.program.source_code == good_code
         assert mock_litellm.call_count == 1  # Only reflection, no fix needed
 
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_no_patch_no_code_exhausts_fix_loop(self, mock_litellm):
         """When reflection and all fix attempts produce no valid output, return None."""
         bad_resp = MagicMock()
@@ -542,10 +542,10 @@ class TestReflectorPatchFormatRecovery:
         assert child is None
         assert mock_litellm.call_count == 3  # 1 reflection + 2 fix attempts
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_apply_patch_failure_enters_fix_loop(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """When apply_patch raises, fall through to fix loop instead of returning None."""
         good_code = "class KnowledgeItem: pass\nclass Query: pass\nclass KnowledgeBase: pass"
@@ -583,10 +583,10 @@ class TestReflectorPatchFormatRecovery:
 class TestReflectorCompileFixLoop:
     _PATCH_RESPONSE = "*** Begin Patch\n*** Update File: program.py\n@@ change\n-old\n+new\n*** End Patch"
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_valid_code_returns_immediately(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """When code compiles and passes smoke test, return without fix attempts."""
         new_code = "from dataclasses import dataclass\n\n@dataclass\nclass KnowledgeItem:\n    raw: str\n\n@dataclass\nclass Query:\n    raw: str\n\nclass KnowledgeBase:\n    def __init__(self, toolkit): pass\n    def write(self, item): pass\n    def read(self, query): return ''"
@@ -610,10 +610,10 @@ class TestReflectorCompileFixLoop:
         assert child is not None
         assert mock_litellm.call_count == 1  # Only the reflection call, no fix calls
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_compile_error_triggers_fix_and_succeeds(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """CompileError triggers fix loop; fixed code is returned."""
         good_code = "class KnowledgeItem: pass\nclass Query: pass\nclass KnowledgeBase: pass"
@@ -648,10 +648,10 @@ class TestReflectorCompileFixLoop:
         assert child is not None
         assert mock_litellm.call_count == 2  # reflection + 1 fix
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_smoke_test_failure_triggers_fix(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """Smoke test failure triggers fix loop."""
         good_code = "class KnowledgeItem: pass\nclass Query: pass\nclass KnowledgeBase: pass"
@@ -687,10 +687,10 @@ class TestReflectorCompileFixLoop:
         assert child is not None
         assert mock_litellm.call_count == 2
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_max_fix_attempts_exhausted_returns_none(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """After max_fix_attempts, return None."""
         # reflect call applies patch -> bad code; each fix call applies patch -> still bad code
@@ -714,10 +714,10 @@ class TestReflectorCompileFixLoop:
         # 1 reflection + 3 fix attempts = 4
         assert mock_litellm.call_count == 4
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_fix_code_extraction_failure_counts_as_attempt(
         self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch
     ):
@@ -746,10 +746,10 @@ class TestReflectorCompileFixLoop:
         assert child is None
         assert mock_litellm.call_count == 4  # 1 reflection + 3 fix attempts
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_fix_succeeds_on_second_attempt(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """First fix attempt fails, second succeeds — verifies code forwarding between attempts."""
         # reflect -> "original bad", fix1 -> "still bad", fix2 -> "finally good"
@@ -793,10 +793,10 @@ class TestReflectorRuntimeFix:
 
     _PATCH_RESPONSE = "*** Begin Patch\n*** Update File: program.py\n@@ change\n-old\n+new\n*** End Patch"
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_fix_succeeds(self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch):
         """LLM returns valid fix -> compile+smoke pass -> return fixed code."""
         fixed_code = "class KnowledgeItem:\n  pass\nclass Query:\n  pass\nclass KnowledgeBase:\n  pass"
@@ -814,7 +814,7 @@ class TestReflectorRuntimeFix:
         prompt = call_args.kwargs["messages"][1]["content"]
         assert "Runtime violation" in prompt
 
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_fix_no_patch_returns_none(self, mock_litellm):
         """LLM returns no patch -> return None."""
         mock_litellm.return_value = MagicMock(
@@ -825,10 +825,10 @@ class TestReflectorRuntimeFix:
 
         assert result is None
 
-    @patch("programmaticmemory.evolution.reflector.apply_patch")
-    @patch("programmaticmemory.evolution.reflector.smoke_test")
-    @patch("programmaticmemory.evolution.reflector.compile_kb_program")
-    @patch("programmaticmemory.evolution.reflector.completion_with_retry")
+    @patch("mstar.evolution.reflector.apply_patch")
+    @patch("mstar.evolution.reflector.smoke_test")
+    @patch("mstar.evolution.reflector.compile_kb_program")
+    @patch("mstar.evolution.reflector.completion_with_retry")
     def test_fix_with_compile_error_enters_compile_fix_loop(
         self, mock_litellm, mock_compile, mock_smoke, mock_apply_patch
     ):

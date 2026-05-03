@@ -61,13 +61,13 @@ When any CLI model parameter (`--task-model`, `--reflect-model`, `--toolkit-mode
 # API key mode
 export AZURE_API_KEY=xxx
 export AZURE_API_BASE=https://myresource.openai.azure.com/
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset locomo --task-model azure/gpt-4o \
   --azure-api-version 2024-12-01-preview
 
 # Token provider mode (after az login)
 az login
-uv run python -m programmaticmemory.evolution \
+uv run python -m mstar.evolution \
   --dataset locomo --task-model azure/gpt-4o \
   --azure-api-base https://myresource.openai.azure.com/ \
   --azure-api-version 2024-12-01-preview

@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fig 1 — Phylogenetic Tree of Evolved Memory Programs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600&display=block" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Regular.ttf") format("truetype"),
+           url("LibertinusSans-Regular.otf") format("opentype");
+      font-weight: 400; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Bold.ttf") format("truetype"),
+           url("LibertinusSans-Bold.otf") format("opentype");
+      font-weight: 700; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Italic.ttf") format("truetype"),
+           url("LibertinusSans-Italic.otf") format("opentype");
+      font-weight: 400; font-style: italic;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; font-family: "Libertinus Sans", "Helvetica Neue", Arial, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script>
+    const TREE_W = 580, TREE_H = 580;
+    const PANEL_W = Math.round(TREE_W / 3 * 2 / 3);  // each side panel
+    const W = PANEL_W + TREE_W + PANEL_W;
+    const H = TREE_H;
+    const CX = PANEL_W + TREE_W/2, CY = H/2;
+    const TR = 207;
+
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", W).attr("height", H)
+      .attr("viewBox", `0 0 ${W} ${H}`)
+      .style("overflow", "hidden")
+      .attr("xmlns", "http://www.w3.org/2000/svg");
+
+    const defs = svg.append("defs");
+
+    // ── Side panel placeholder boxes ──────────────────────────────────
+    const BOX_MARGIN_OUTER = 10;  // margin on the outer edge
+    const BOX_MARGIN_INNER = -55; // push boxes into tree's empty margin
+    const BOX_MARGIN_Y = 24;
+    const BOX_GAP = 20;
+    const BOX_W = PANEL_W - BOX_MARGIN_OUTER + 30; // fixed width (original value when inner was -30)
+    const BOX_H = (H - BOX_MARGIN_Y * 2 - BOX_GAP) / 2 * 4 / 5;
+
+    function drawPanelBoxes(panelX, isLeft, topColor, bottomColor) {
+      const boxX = isLeft ? panelX + BOX_MARGIN_OUTER + 25 : panelX + BOX_MARGIN_INNER;
+      const totalH = BOX_H * 2 + BOX_GAP;
+      const topY = (H - totalH) / 2;  // vertically center both boxes
+      // Top box
+      svg.append("rect")
+        .attr("x", boxX).attr("y", topY)
+        .attr("width", BOX_W).attr("height", BOX_H)
+        .attr("rx", 6).attr("fill", "none")
+        .attr("stroke", topColor).attr("stroke-width", 1)
+        .attr("stroke-dasharray", "4,3");
+      // Bottom box
+      svg.append("rect")
+        .attr("x", boxX).attr("y", topY + BOX_H + BOX_GAP)
+        .attr("width", BOX_W).attr("height", BOX_H)
+        .attr("rx", 6).attr("fill", "none")
+        .attr("stroke", bottomColor).attr("stroke-width", 1)
+        .attr("stroke-dasharray", "4,3");
+    }
+
+    // Left panel: top=Legal(purple), bottom=ALFWorld(teal)
+    // Right panel: top=LoCoMo(blue), bottom=HB(pink)
+    drawPanelBoxes(0, true, "#6A1B9A", "#00838F");
+    drawPanelBoxes(PANEL_W + TREE_W, false, "#1565C0", "#D81B60");
+
+    // ── Left-top box content: Legal (PRBench) ─────────────────────────
+    {
+      const bx = BOX_MARGIN_OUTER + 25;
+      const totalH = BOX_H * 2 + BOX_GAP;
+      const by = (H - totalH) / 2;
+      const bw = BOX_W, bh = BOX_H;
+      const legalColor = "#6A1B9A";
+      const pad = 6;
+      const g = svg.append("g");
+
+      // Section heights: 2/5 question, 2/5 memory, 1/5 answer
+      const sec1H = bh * 2 / 5;
+      const sec2H = bh * 2 / 5;
+      const sec3H = bh * 1 / 5;
+      const sec1Y = by;
+      const sec2Y = by + sec1H;
+      const sec3Y = by + sec1H + sec2H;
+
+      // Divider lines
+      [sec2Y, sec3Y].forEach(dy => {
+        g.append("line")
+          .attr("x1", bx + 4).attr("y1", dy)
+          .attr("x2", bx + bw - 4).attr("y2", dy)
+          .attr("stroke", "#d0c0e0").attr("stroke-width", 0.5)
+          .attr("stroke-dasharray", "3,2");
+      });
+
+      // Arrow marker
+      defs.append("marker")
+        .attr("id", "legal-arrow")
+        .attr("viewBox", "0 0 6 6").attr("refX", 5).attr("refY", 3)
+        .attr("markerWidth", 4).attr("markerHeight", 4)
+        .attr("orient", "auto")
+        .append("path").attr("d", "M0,0 L6,3 L0,6 Z").attr("fill", legalColor);
+
+      // Helper: draw section icon + heading
+      const headingH = 16;
+      function drawSectionHeading(secY, iconSvg, label) {
+        const iconS = 12;
+        const scale = iconS / 24;
+        const iconX = bx + pad;
+        const iconY = secY + 2;
+        g.append("g")
+          .attr("transform", `translate(${iconX},${iconY}) scale(${scale})`)
+          .attr("fill", "none").attr("stroke", legalColor)
+          .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+          .html(iconSvg);
+        g.append("text")
+          .attr("x", iconX + iconS + 3).attr("y", secY + 11)
+          .attr("font-size", "8.4px").attr("font-weight", "700")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", legalColor)
+          .text(label);
+      }
+
+      // ═══ Section 1: Legal Query (2/5) ═══
+      drawSectionHeading(sec1Y,
+        `<path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M7 21h10"/>`,
+        "Task: Legal Queries");
+
+      const bubbleW = bw - pad * 2 - 6;
+      const bubbleTopY = sec1Y + headingH + 2;
+      const bubbleH = sec1H - headingH - pad - 4;
+      const bubbleX = bx + pad;
+
+      // Stack shadows
+      [4, 2].forEach(offset => {
+        g.append("rect")
+          .attr("x", bubbleX + offset).attr("y", bubbleTopY + offset)
+          .attr("width", bubbleW).attr("height", bubbleH)
+          .attr("rx", 4).attr("fill", "#f3e5f9")
+          .attr("stroke", legalColor).attr("stroke-width", 0.3)
+          .attr("opacity", 0.35);
+      });
+      g.append("rect")
+        .attr("x", bubbleX).attr("y", bubbleTopY)
+        .attr("width", bubbleW).attr("height", bubbleH)
+        .attr("rx", 4).attr("fill", "#faf5ff")
+        .attr("stroke", legalColor).attr("stroke-width", 0.6);
+      // Chat bubble tail (bottom-left triangle)
+      const tailX = bubbleX + 10;
+      const tailY = bubbleTopY + bubbleH;
+      g.append("path")
+        .attr("d", `M${tailX},${tailY} L${tailX - 5},${tailY + 6} L${tailX + 5},${tailY}`)
+        .attr("fill", "#faf5ff")
+        .attr("stroke", legalColor).attr("stroke-width", 0.6);
+      // Cover the stroke on the bubble edge where tail meets
+      g.append("line")
+        .attr("x1", tailX - 0.5).attr("y1", tailY)
+        .attr("x2", tailX + 5.5).attr("y2", tailY)
+        .attr("stroke", "#faf5ff").attr("stroke-width", 1.5);
+
+      const bubbleLines = [
+        "Neighbor's fence is 3ft onto my",
+        "property (15+ yrs). They claim",
+        "rights from deed language. Texas.",
+        "What are my legal options?"
+      ];
+      const lineH = (bubbleH - 6) / bubbleLines.length * 0.8;
+      const textStartY = bubbleTopY + (bubbleH - lineH * (bubbleLines.length - 1)) / 2;
+      bubbleLines.forEach((line, i) => {
+        g.append("text")
+          .attr("x", bubbleX + 5).attr("y", textStartY + i * lineH)
+          .attr("font-size", "7.8px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", "#4a148c")
+          .text(line);
+      });
+
+      // ═══ Section 2: Legislation Database (2/5) ═══
+      drawSectionHeading(sec2Y,
+        `<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="3" x2="21" y1="15" y2="15"/><line x1="9" x2="9" y1="9" y2="21"/><line x1="15" x2="15" y1="9" y2="21"/>`,
+        "Memory: Legislation DB");
+
+      // Layout: table takes left 2/3, flow diagram takes right 1/3
+      const tableX = bx + pad;
+      const tableY = sec2Y + headingH + 2;
+      const fullW = bw - pad * 2;
+      const tableW = fullW * 0.63;
+      const flowX = tableX + tableW + 6;
+      const flowW = fullW - tableW - 6;
+      const colW = [tableW * 0.35, tableW * 0.38, tableW * 0.27];
+      const rowH = 13;
+      const cols = ["STATE", "STATUTE", "LIMIT"];
+      const rows = [
+        ["Texas", "§16.026", "10 yr"],
+        ["Florida", "§95.18", "7 yr"],
+        ["Calif.", "CCP §325", "5 yr"],
+      ];
+
+      // Table outer border (database look)
+      const tableH = rowH * (rows.length + 1);
+      g.append("rect")
+        .attr("x", tableX).attr("y", tableY)
+        .attr("width", tableW).attr("height", tableH)
+        .attr("rx", 2).attr("fill", "none")
+        .attr("stroke", legalColor).attr("stroke-width", 1);
+
+      // Table header
+      let cx = tableX;
+      cols.forEach((col, ci) => {
+        g.append("rect")
+          .attr("x", cx).attr("y", tableY)
+          .attr("width", colW[ci]).attr("height", rowH)
+          .attr("fill", legalColor).attr("opacity", 0.2);
+        g.append("text")
+          .attr("x", cx + colW[ci] / 2).attr("y", tableY + 9.5)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "5.8px").attr("font-weight", "700")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", legalColor)
+          .text(col);
+        cx += colW[ci];
+      });
+      // Header bottom line
+      g.append("line")
+        .attr("x1", tableX).attr("y1", tableY + rowH)
+        .attr("x2", tableX + tableW).attr("y2", tableY + rowH)
+        .attr("stroke", legalColor).attr("stroke-width", 0.8);
+
+      // Table rows
+      rows.forEach((row, ri) => {
+        cx = tableX;
+        const ry = tableY + rowH * (ri + 1);
+        const isHighlight = ri === 0;
+        // Row background
+        g.append("rect")
+          .attr("x", tableX + 0.5).attr("y", ry)
+          .attr("width", tableW - 1).attr("height", rowH)
+          .attr("fill", isHighlight ? "#f3e5f9" : "#fff");
+        // Row bottom line
+        if (ri < rows.length - 1) {
+          g.append("line")
+            .attr("x1", tableX).attr("y1", ry + rowH)
+            .attr("x2", tableX + tableW).attr("y2", ry + rowH)
+            .attr("stroke", "#d0c0e0").attr("stroke-width", 0.4);
+        }
+        // Column dividers
+        let colX = tableX;
+        colW.slice(0, -1).forEach(w => {
+          colX += w;
+          g.append("line")
+            .attr("x1", colX).attr("y1", ry)
+            .attr("x2", colX).attr("y2", ry + rowH)
+            .attr("stroke", "#d0c0e0").attr("stroke-width", 0.3);
+        });
+        // Cell text
+        row.forEach((cell, ci) => {
+          g.append("text")
+            .attr("x", cx + colW[ci] / 2).attr("y", ry + 9.5)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "5.8px")
+            .attr("font-family", '"Libertinus Sans", sans-serif')
+            .attr("fill", isHighlight ? legalColor : "#666")
+            .attr("font-weight", isHighlight ? "600" : "400")
+            .text(cell);
+          cx += colW[ci];
+        });
+      });
+
+      // ── Right 1/3: Query flow diagram ──
+
+      // Query badge at top-right
+      const qBadgeW = flowW - 2;
+      const qBadgeH = 14;
+      const qBadgeX = flowX;
+      const qBadgeY = tableY;
+      g.append("rect")
+        .attr("x", qBadgeX).attr("y", qBadgeY)
+        .attr("width", qBadgeW).attr("height", qBadgeH)
+        .attr("rx", 7).attr("fill", legalColor).attr("opacity", 0.12)
+        .attr("stroke", legalColor).attr("stroke-width", 0.5);
+      // Search icon (small magnifier)
+      const sIconS = 6;
+      const sScale = sIconS / 24;
+      g.append("g")
+        .attr("transform", `translate(${qBadgeX + 3},${qBadgeY + 4}) scale(${sScale})`)
+        .attr("fill", "none").attr("stroke", legalColor)
+        .attr("stroke-width", 2.5).attr("stroke-linecap", "round")
+        .html(`<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>`);
+      g.append("text")
+        .attr("x", qBadgeX + sIconS + 8).attr("y", qBadgeY + 9.5)
+        .attr("font-size", "6px").attr("font-weight", "600")
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("fill", legalColor)
+        .text("Texas?");
+
+      // Arrow from query badge to table (horizontal, pointing left)
+      const arrowQY = qBadgeY + qBadgeH / 2;
+      g.append("line")
+        .attr("x1", qBadgeX - 1).attr("y1", arrowQY)
+        .attr("x2", tableX + tableW + 1).attr("y2", arrowQY)
+        .attr("stroke", legalColor).attr("stroke-width", 0.7)
+        .attr("marker-end", "url(#legal-arrow-left)");
+
+      // Left-pointing arrow marker
+      defs.append("marker")
+        .attr("id", "legal-arrow-left")
+        .attr("viewBox", "0 0 6 6").attr("refX", 1).attr("refY", 3)
+        .attr("markerWidth", 4).attr("markerHeight", 4)
+        .attr("orient", "auto")
+        .append("path").attr("d", "M6,0 L0,3 L6,6 Z").attr("fill", legalColor);
+
+      // Arrow from highlighted row to right
+      const highlightRowY = tableY + rowH + rowH / 2;
+      const matchX = flowX + flowW / 2;
+      // Horizontal line from table to right area
+      g.append("path")
+        .attr("d", `M${tableX + tableW},${highlightRowY} L${matchX},${highlightRowY} L${matchX},${tableY + tableH - 2}`)
+        .attr("fill", "none").attr("stroke", legalColor)
+        .attr("stroke-width", 0.7)
+        .attr("marker-end", "url(#legal-arrow)");
+
+      // Result badge at bottom
+      const rBadgeW = qBadgeW;
+      const rBadgeH = 14;
+      const rBadgeX = flowX;
+      const rBadgeY = tableY + tableH - rBadgeH;
+      g.append("rect")
+        .attr("x", rBadgeX).attr("y", rBadgeY)
+        .attr("width", rBadgeW).attr("height", rBadgeH)
+        .attr("rx", 3).attr("fill", "#f3e5f9")
+        .attr("stroke", legalColor).attr("stroke-width", 0.5);
+      g.append("text")
+        .attr("x", rBadgeX + rBadgeW / 2).attr("y", rBadgeY + 10)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "5.5px").attr("font-weight", "600")
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("fill", legalColor)
+        .text("§16.026, 10yr");
+
+      // ═══ Section 3: Agent Answer (1/5) ═══
+      drawSectionHeading(sec3Y,
+        `<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>`,
+        "Agent");
+
+      const outX = bx + pad;
+      const outY = sec3Y + headingH - 2;
+
+      const outLines = [
+        "Permissive use does not qualify under §16.026.",
+        "File a quiet title action to resolve this."
+      ];
+      outLines.forEach((line, i) => {
+        g.append("text")
+          .attr("x", outX).attr("y", outY + 9 + i * 9)
+          .attr("font-size", "7.1px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", "#4a148c")
+          .text(line);
+      });
+    }
+
+    // Domain palette
+    const DC = [
+      { name: "Conversation (LoCoMo)", c: "#1565C0" },
+      { name: "Healthcare (HB)",       c: "#D81B60" },
+      { name: "Embodied AI (ALFWorld)",c: "#00838F" },
+      { name: "Legal (PRBench)",       c: "#6A1B9A" },
+    ];
+
+    // Per-domain radial gradients
+    DC.forEach((dom, i) => {
+      const grad = defs.append("radialGradient").attr("id", `tg-${i}`);
+      grad.append("stop").attr("offset", "0%").attr("stop-color", dom.c).attr("stop-opacity", 0.18);
+      grad.append("stop").attr("offset", "45%").attr("stop-color", dom.c).attr("stop-opacity", 0.10);
+      grad.append("stop").attr("offset", "85%").attr("stop-color", dom.c).attr("stop-opacity", 0.03);
+      grad.append("stop").attr("offset", "100%").attr("stop-color", dom.c).attr("stop-opacity", 0);
+    });
+
+    // Load tree data
+    let PHYLO_DATA = null;
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", "phylo_ours.json", false);
+      xhr.send();
+      if (xhr.status === 200 || xhr.status === 0) PHYLO_DATA = JSON.parse(xhr.responseText);
+    } catch(e) { console.warn("Could not load phylo_ours.json:", e); }
+
+    if (PHYLO_DATA) {
+      const gTree = svg.append("g").attr("transform", `translate(${CX},${CY}) rotate(12)`);
+      const gLabels = svg.append("g").attr("transform", `translate(${CX},${CY})`);
+
+      const root = d3.hierarchy(PHYLO_DATA);
+
+      // Propagate domain index
+      root.each(n => {
+        if (n.depth <= 1) n.data.d = -1;
+        else if (n.depth >= 3) n.data.d = n.parent.data.d;
+      });
+
+      // Cluster layout
+      d3.cluster()
+        .size([2 * Math.PI, TR])
+        .separation((a, b) => a.parent === b.parent ? 1 : 2)
+        (root);
+
+      // All leaves extend to outermost ring
+      root.leaves().forEach(l => { l.y = TR; });
+
+      const px = n => n.y * Math.sin(n.x);
+      const py = n => -n.y * Math.cos(n.x);
+
+      // ── Best-scoring leaf per domain (from actual experiment best iter) ──
+      // These labels identify the phylo leaf that corresponds to each task's
+      // best iteration in outputs/t1-*-ours/state.json. Used for (a) lineage
+      // highlighting and (b) panel dashed-connector targets.
+      const BEST_LEAF_LABELS = {
+        // LoCoMo: iter_5 = +relation extraction (0.333); point to its outermost
+        // descendant +intent detection so the halo lands on the outer ring like
+        // the other three domains.
+        0: "+intent detection",
+        1: "+scenario scoring",     // HB      (iter_5, 0.518 — phylo top 0.487)
+        2: "+action cache",         // ALFWorld (iter_13, 0.844 — phylo ≥0.98 tie)
+        3: "+retrieval signals",    // Legal    (iter_18, 0.590)
+      };
+      const bestLeafByD = {};
+      const onPathNodes = new Set();
+      const onPathChildOf = new Map();  // parent-node → on-path-child-node
+      Object.entries(BEST_LEAF_LABELS).forEach(([d, lbl]) => {
+        // Note: "leaf" here is semantic (best program), not d3-leaf — some
+        // best programs are internal nodes because their descendants exist
+        // in the phylo but scored lower (e.g., LoCoMo's +relation extraction
+        // has +intent detection as a child).
+        const leaf = root.descendants().find(
+          n => n.data.d === +d && n.data.label === lbl);
+        if (!leaf) return;
+        bestLeafByD[+d] = leaf;
+        let cur = leaf;
+        while (cur.parent) {
+          onPathNodes.add(cur);
+          onPathChildOf.set(cur.parent, cur);
+          cur = cur.parent;
+        }
+        onPathNodes.add(cur);
+      });
+
+      // Background sectors
+      const sectorArc = d3.arc();
+      DC.forEach((dom, i) => {
+        const leaves = root.leaves().filter(l => l.data.d === i);
+        if (!leaves.length) return;
+        const angles = leaves.map(l => l.x);
+        gTree.append("path")
+          .attr("d", sectorArc({
+            innerRadius: 0, outerRadius: TR + 10,
+            startAngle: Math.min(...angles) - 0.12,
+            endAngle: Math.max(...angles) + 0.12,
+          }))
+          .attr("fill", `url(#tg-${i})`);
+      });
+
+      // Reference rings
+      [0.3, 0.55, 0.8].forEach(f => {
+        gTree.append("circle").attr("r", TR * f)
+          .attr("fill", "none").attr("stroke", "#e8e8e8")
+          .attr("stroke-width", 0.4).attr("stroke-dasharray", "3,4");
+      });
+
+      // Arcs (connecting siblings at parent radius)
+      root.descendants().filter(n => n.children && n.children.length > 1).forEach(node => {
+        const r = node.y;
+        const childAngles = node.children.map(c => c.x).sort((a, b) => a - b);
+        const minA = childAngles[0], maxA = childAngles[childAngles.length - 1];
+        if (maxA - minA < 0.001) return;
+        const x1 = r * Math.sin(minA), y1 = -r * Math.cos(minA);
+        const x2 = r * Math.sin(maxA), y2 = -r * Math.cos(maxA);
+        const largeArc = (maxA - minA) > Math.PI ? 1 : 0;
+        const di = node.data.d;
+        const col = di >= 0 ? DC[di].c : "#b0b0b0";
+        gTree.append("path")
+          .attr("d", `M ${x1},${y1} A ${r},${r} 0 ${largeArc} 1 ${x2},${y2}`)
+          .attr("fill", "none").attr("stroke", col)
+          .attr("stroke-width", Math.max(0.8, 2.5 - node.depth * 0.25))
+          .attr("stroke-opacity", node.depth <= 1 ? 0.35 : 0.6)
+          .attr("stroke-linecap", "round");
+      });
+
+      // Radial lines
+      root.links().forEach(link => {
+        const pR = link.source.y, cR = link.target.y, cA = link.target.x;
+        const x1 = pR * Math.sin(cA), y1 = -pR * Math.cos(cA);
+        const x2 = cR * Math.sin(cA), y2 = -cR * Math.cos(cA);
+        const di = link.target.data.d;
+        const col = di >= 0 ? DC[di].c : "#b0b0b0";
+        gTree.append("line")
+          .attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2)
+          .attr("stroke", col)
+          .attr("stroke-width", Math.max(0.8, 2.5 - link.target.depth * 0.25))
+          .attr("stroke-opacity", link.source.depth <= 1 ? 0.35 : 0.6)
+          .attr("stroke-linecap", "round");
+      });
+
+      // Internal node dots
+      root.descendants().filter(n => n.depth > 1 && n.children).forEach(n => {
+        gTree.append("circle")
+          .attr("cx", px(n)).attr("cy", py(n)).attr("r", 2.8)
+          .attr("fill", DC[n.data.d]?.c || "#999").attr("opacity", 0.5);
+      });
+
+      // Leaf dots
+      root.leaves().forEach(leaf => {
+        const col = DC[leaf.data.d]?.c || "#999";
+        gTree.append("circle")
+          .attr("cx", px(leaf)).attr("cy", py(leaf)).attr("r", 3.5)
+          .attr("fill", col).attr("stroke", "white").attr("stroke-width", 0.8)
+          .attr("opacity", 0.85);
+      });
+
+      // ── Highlight overlay: best-scoring lineage per domain ──
+      // Drawn above base strokes; each on-path edge gets a thicker, fully
+      // opaque overlay in the domain color so readers can trace root → best.
+      const gHilite = gTree.append("g").attr("class", "best-path-overlay");
+
+      // Sub-arcs: for each parent on the path, overlay the arc segment
+      // from parent's own angle to its on-path child's angle at parent.y.
+      onPathChildOf.forEach((child, parent) => {
+        if (parent.depth === 0) return;  // root has no angle-at-y to draw
+        if (!parent.children || parent.children.length < 2) return;
+        const r = parent.y;
+        const a1 = parent.x, a2 = child.x;
+        if (Math.abs(a1 - a2) < 0.001) return;
+        const minA = Math.min(a1, a2), maxA = Math.max(a1, a2);
+        const x1 = r * Math.sin(minA), y1 = -r * Math.cos(minA);
+        const x2 = r * Math.sin(maxA), y2 = -r * Math.cos(maxA);
+        const largeArc = (maxA - minA) > Math.PI ? 1 : 0;
+        const col = DC[child.data.d]?.c || "#666";
+        gHilite.append("path")
+          .attr("d", `M ${x1},${y1} A ${r},${r} 0 ${largeArc} 1 ${x2},${y2}`)
+          .attr("fill", "none").attr("stroke", col)
+          .attr("stroke-width", 2.2).attr("stroke-opacity", 1)
+          .attr("stroke-linecap", "round");
+      });
+
+      // Radial lines on the path
+      root.links().forEach(link => {
+        if (!onPathNodes.has(link.target) || !onPathNodes.has(link.source)) return;
+        const pR = link.source.y, cR = link.target.y, cA = link.target.x;
+        const x1 = pR * Math.sin(cA), y1 = -pR * Math.cos(cA);
+        const x2 = cR * Math.sin(cA), y2 = -cR * Math.cos(cA);
+        const di = link.target.data.d;
+        const col = di >= 0 ? DC[di].c : "#777";
+        gHilite.append("line")
+          .attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2)
+          .attr("stroke", col).attr("stroke-width", 2.2)
+          .attr("stroke-opacity", 1).attr("stroke-linecap", "round");
+      });
+
+      // Emphasize internal dots on the path
+      root.descendants().forEach(n => {
+        if (!onPathNodes.has(n)) return;
+        if (n.depth <= 1) return;
+        if (!n.children) return;
+        gHilite.append("circle")
+          .attr("cx", px(n)).attr("cy", py(n)).attr("r", 3.2)
+          .attr("fill", DC[n.data.d]?.c || "#666").attr("opacity", 1);
+      });
+
+      // Best leaf: large dot with soft halo
+      Object.values(bestLeafByD).forEach(leaf => {
+        const col = DC[leaf.data.d]?.c || "#666";
+        gHilite.append("circle")
+          .attr("cx", px(leaf)).attr("cy", py(leaf)).attr("r", 7.5)
+          .attr("fill", col).attr("opacity", 0.18);
+        gHilite.append("circle")
+          .attr("cx", px(leaf)).attr("cy", py(leaf)).attr("r", 4.8)
+          .attr("fill", col).attr("stroke", "white").attr("stroke-width", 1.4)
+          .attr("opacity", 1);
+      });
+
+      // Root badge: Lucide database icon + text above
+      const iconSize = 16;
+      const scale = iconSize / 24;
+      // Database icon (Lucide) centered at origin
+      gLabels.append("g")
+        .attr("transform", `translate(${-iconSize/2},${-iconSize/2}) scale(${scale})`)
+        .attr("fill", "none")
+        .attr("stroke", "#333")
+        .attr("stroke-width", 1.5)
+        .attr("stroke-linecap", "round")
+        .attr("stroke-linejoin", "round")
+        .html(`
+          <path d="M3 5v14a9 3 0 0 0 9.28 2.999 L21 11.693V5Z" fill="#eee" stroke="none"/>
+          <path d="M3 5v14a9 3 0 0 0 9.28 2.999"/>
+          <path d="M21 11.693V5"/>
+          <path d="M3 12a9 3 0 0 0 8.697 2.998"/>
+          <ellipse cx="12" cy="5" rx="9" ry="3" fill="#eee"/>
+          <circle cx="18" cy="18" r="3"/>
+          <path d="m22 22-1.875-1.875"/>
+        `);
+      // Text above icon
+      const badgeText = gLabels.append("text")
+        .attr("text-anchor", "middle")
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("font-size", "7.5px")
+        .attr("font-weight", "600")
+        .attr("fill", "#333");
+      badgeText.append("tspan").attr("x", 0).attr("dy", 0).attr("y", -32).text("General");
+      badgeText.append("tspan").attr("x", 0).attr("dy", "1.15em").text("Memory");
+      badgeText.append("tspan").attr("x", 0).attr("dy", "1.15em").text("Program");
+
+      // ================================================================
+      // Collision-aware label placement
+      // ================================================================
+
+      // 1. Collect all tree line segments for collision detection
+      const treeSegs = [];
+      root.links().forEach(link => {
+        const pR = link.source.y, cR = link.target.y, cA = link.target.x;
+        treeSegs.push([
+          pR * Math.sin(cA), -pR * Math.cos(cA),
+          cR * Math.sin(cA), -cR * Math.cos(cA)
+        ]);
+      });
+      root.descendants().filter(n => n.children && n.children.length > 1).forEach(node => {
+        const r = node.y;
+        const cas = node.children.map(c => c.x).sort((a, b) => a - b);
+        const minA = cas[0], maxA = cas[cas.length - 1];
+        if (maxA - minA < 0.001) return;
+        const N = Math.max(4, Math.ceil((maxA - minA) / 0.02));
+        for (let i = 0; i < N; i++) {
+          const a1 = minA + (maxA - minA) * i / N;
+          const a2 = minA + (maxA - minA) * (i + 1) / N;
+          treeSegs.push([
+            r * Math.sin(a1), -r * Math.cos(a1),
+            r * Math.sin(a2), -r * Math.cos(a2)
+          ]);
+        }
+      });
+
+      // 2. Liang-Barsky segment vs AABB intersection length
+      function segAABB(x1, y1, x2, y2, xmin, ymin, xmax, ymax) {
+        let t0 = 0, t1 = 1;
+        const dx = x2 - x1, dy = y2 - y1;
+        const p = [-dx, dx, -dy, dy];
+        const q = [x1 - xmin, xmax - x1, y1 - ymin, ymax - y1];
+        for (let i = 0; i < 4; i++) {
+          if (Math.abs(p[i]) < 1e-10) { if (q[i] < 0) return 0; }
+          else {
+            const r = q[i] / p[i];
+            if (p[i] < 0) { if (r > t0) t0 = r; }
+            else           { if (r < t1) t1 = r; }
+          }
+        }
+        if (t0 > t1) return 0;
+        const segLen = Math.sqrt(dx * dx + dy * dy);
+        return (t1 - t0) * segLen;
+      }
+
+      // 3. Measure text width
+      const LABEL_FONT_SIZE = "7.5px";
+      const measurer = gTree.append("text")
+        .attr("font-size", LABEL_FONT_SIZE)
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("visibility", "hidden");
+      const _measureCache = {};
+      function measureW(str) {
+        if (_measureCache[str] !== undefined) return _measureCache[str];
+        measurer.text(str);
+        const w = measurer.node().getComputedTextLength();
+        _measureCache[str] = w;
+        return w;
+      }
+      const CH = 8;
+
+      // 4. Place labels: outer-first greedy
+      const labelNodes = root.descendants().filter(n => n.data.label && n.depth > 1);
+      labelNodes.sort((a, b) => b.y - a.y);
+
+      const placedBoxes = [];
+
+      function scoreFull(la, sr, tw, th) {
+        const cr = sr - tw / 2;
+        const cx = cr * Math.sin(la), cy = -cr * Math.cos(la);
+        let rot = la - Math.PI / 2;
+        if (rot > Math.PI / 2) rot -= Math.PI;
+        const cosR = Math.cos(-rot), sinR = Math.sin(-rot);
+        const hw = tw / 2, hh = th / 2;
+        let total = 0;
+        for (const s of treeSegs) {
+          const dx1 = s[0] - cx, dy1 = s[1] - cy;
+          const dx2 = s[2] - cx, dy2 = s[3] - cy;
+          total += segAABB(
+            dx1 * cosR - dy1 * sinR, dx1 * sinR + dy1 * cosR,
+            dx2 * cosR - dy2 * sinR, dx2 * sinR + dy2 * cosR,
+            -hw, -hh, hw, hh
+          );
+        }
+        for (const pb of placedBoxes) {
+          const pCos = Math.cos(pb.rot), pSin = Math.sin(pb.rot);
+          const phw = pb.w / 2, phh = pb.h / 2;
+          const corners = [
+            [-phw, -phh], [phw, -phh], [phw, phh], [-phw, phh]
+          ].map(([lx, ly]) => [
+            pb.cx + lx * pCos - ly * pSin,
+            pb.cy + lx * pSin + ly * pCos
+          ]);
+          for (let i = 0; i < 4; i++) {
+            const [ex1, ey1] = corners[i];
+            const [ex2, ey2] = corners[(i + 1) % 4];
+            const dx1 = ex1 - cx, dy1 = ey1 - cy;
+            const dx2 = ex2 - cx, dy2 = ey2 - cy;
+            total += segAABB(
+              dx1 * cosR - dy1 * sinR, dx1 * sinR + dy1 * cosR,
+              dx2 * cosR - dy2 * sinR, dx2 * sinR + dy2 * cosR,
+              -hw, -hh, hw, hh
+            ) * 3;
+          }
+          const myCornersG = [
+            [-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]
+          ].map(([lx, ly]) => [
+            cx + lx * Math.cos(rot) - ly * Math.sin(rot),
+            cy + lx * Math.sin(rot) + ly * Math.cos(rot)
+          ]);
+          const pbCosN = Math.cos(-pb.rot), pbSinN = Math.sin(-pb.rot);
+          for (let i = 0; i < 4; i++) {
+            const [ex1, ey1] = myCornersG[i];
+            const [ex2, ey2] = myCornersG[(i + 1) % 4];
+            const dx1 = ex1 - pb.cx, dy1 = ey1 - pb.cy;
+            const dx2 = ex2 - pb.cx, dy2 = ey2 - pb.cy;
+            total += segAABB(
+              dx1 * pbCosN - dy1 * pbSinN, dx1 * pbSinN + dy1 * pbCosN,
+              dx2 * pbCosN - dy2 * pbSinN, dx2 * pbSinN + dy2 * pbCosN,
+              -phw, -phh, phw, phh
+            ) * 3;
+          }
+        }
+        return total;
+      }
+
+      labelNodes.forEach(n => {
+        const angle = n.x;
+        const col = DC[n.data.d]?.c || "#666";
+        const labelText = n.data.label;
+        const words = labelText.split(" ");
+        const isLeaf = !n.children;
+        const canSplit = words.length > 1;
+
+        const pxOpts = isLeaf ? [8, 12, 16, 20] : [4, 8, 12, 16];
+        const dirOpts = [1, -1];
+        const rShifts = [0, 6, 12, 18, -6];
+        const fmts = canSplit ? ["double", "single"] : ["single"];
+
+        let bestScore = Infinity, bestCfg = null, bestTw = 0, bestTh = 0;
+        for (const pxVal of pxOpts) {
+          for (const dir of dirOpts) {
+            for (const rs of rShifts) {
+              for (const fmt of fmts) {
+                const nudge = (pxVal / Math.max(n.y, 20)) * dir;
+                const la = angle + nudge;
+                const sr = n.y - 4 + rs;
+                if (sr < 15) continue;
+                let tw, th;
+                if (fmt === "double") {
+                  const mid = Math.ceil(words.length / 2);
+                  const l1 = words.slice(0, mid).join(" ");
+                  const l2 = words.slice(mid).join(" ");
+                  tw = Math.max(measureW(l1), measureW(l2));
+                  th = 16;
+                } else {
+                  tw = measureW(labelText);
+                  th = CH;
+                }
+                if (sr - tw < 5) continue;
+                const sc = scoreFull(la, sr, tw, th);
+                if (sc < bestScore) {
+                  bestScore = sc; bestCfg = { la, sr, fmt };
+                  bestTw = tw; bestTh = th;
+                }
+              }
+            }
+          }
+        }
+
+        if (!bestCfg) {
+          const fallbackNudge = (16 / Math.max(n.y, 20));
+          bestCfg = { la: angle + fallbackNudge, sr: n.y - 4 + 18,
+                      fmt: canSplit ? "double" : "single" };
+          if (canSplit) {
+            const mid = Math.ceil(words.length / 2);
+            bestTw = Math.max(measureW(words.slice(0, mid).join(" ")),
+                              measureW(words.slice(mid).join(" ")));
+            bestTh = 16;
+          } else { bestTw = measureW(labelText); bestTh = CH; }
+        }
+
+        const { la, sr, fmt } = bestCfg;
+        const cr = sr - bestTw / 2;
+        let placedRot = la - Math.PI / 2;
+        if (placedRot > Math.PI / 2) placedRot -= Math.PI;
+        placedBoxes.push({
+          cx: cr * Math.sin(la), cy: -cr * Math.cos(la),
+          w: bestTw, h: bestTh, rot: placedRot
+        });
+
+        const lx = sr * Math.sin(la), ly = -sr * Math.cos(la);
+        let rot = la * 180 / Math.PI - 90;
+        const flip = rot > 90;
+        if (flip) rot -= 180;
+
+        if (fmt === "double") {
+          const mid = Math.ceil(words.length / 2);
+          const line1 = words.slice(0, mid).join(" ");
+          const line2 = words.slice(mid).join(" ");
+          const lineH = 8;
+          const perpX = Math.cos(la), perpY = Math.sin(la);
+          const sign = flip ? -1 : 1;
+          [line1, line2].forEach((line, li) => {
+            const off = (li - 0.5) * lineH * sign;
+            gTree.append("text")
+              .attr("x", lx + off * perpX).attr("y", ly + off * perpY)
+              .attr("text-anchor", flip ? "start" : "end")
+              .attr("dominant-baseline", "central")
+              .attr("fill", col).attr("font-size", LABEL_FONT_SIZE)
+              .attr("font-family", '"Libertinus Sans", sans-serif')
+              .attr("opacity", 0.75)
+              .attr("transform", `rotate(${rot},${lx + off * perpX},${ly + off * perpY})`)
+              .text(line);
+          });
+        } else {
+          gTree.append("text")
+            .attr("x", lx).attr("y", ly)
+            .attr("text-anchor", flip ? "start" : "end")
+            .attr("dominant-baseline", "central")
+            .attr("fill", col).attr("font-size", LABEL_FONT_SIZE)
+            .attr("font-family", '"Libertinus Sans", sans-serif')
+            .attr("opacity", 0.75)
+            .attr("transform", `rotate(${rot},${lx},${ly})`)
+            .text(labelText);
+        }
+      });
+
+      measurer.remove();
+
+      // Outer ring
+      gTree.append("circle").attr("r", TR + 5)
+        .attr("fill", "none").attr("stroke", "#e0e0e0").attr("stroke-width", 0.5);
+
+      // ── Connector: best Legal leaf → left-top box ──
+      // Target the phylo leaf that corresponds to Legal's best iter (iter_18).
+      const idfLeaf = bestLeafByD[3];
+      if (idfLeaf) {
+        // Leaf position in tree-local coords (gTree is rotated 12°)
+        const leafLocalX = px(idfLeaf);
+        const leafLocalY = py(idfLeaf);
+        // Convert to SVG coords: apply rotation then translate
+        const rotRad = 12 * Math.PI / 180;
+        const leafSvgX = CX + leafLocalX * Math.cos(rotRad) - leafLocalY * Math.sin(rotRad);
+        const leafSvgY = CY + leafLocalX * Math.sin(rotRad) + leafLocalY * Math.cos(rotRad);
+        // Left-top box right edge
+        const boxRightX = BOX_MARGIN_OUTER + 25 + BOX_W;
+        // Draw horizontal dashed line
+        svg.append("line")
+          .attr("x1", boxRightX + 1).attr("y1", leafSvgY)
+          .attr("x2", leafSvgX - 4).attr("y2", leafSvgY)
+          .attr("stroke", "#6A1B9A").attr("stroke-width", 0.9)
+          .attr("stroke-dasharray", "4,3")
+          .attr("opacity", 0.8);
+      // ── Connector: best LoCoMo leaf → right-top box ──
+      const personLeaf = bestLeafByD[0];
+      if (personLeaf) {
+        const pLocalX = px(personLeaf);
+        const pLocalY = py(personLeaf);
+        const rotRad2 = 12 * Math.PI / 180;
+        const pSvgX = CX + pLocalX * Math.cos(rotRad2) - pLocalY * Math.sin(rotRad2);
+        const pSvgY = CY + pLocalX * Math.sin(rotRad2) + pLocalY * Math.cos(rotRad2);
+        // Right-top box left edge
+        const rtBoxX = PANEL_W + TREE_W + BOX_MARGIN_INNER;
+        svg.append("line")
+          .attr("x1", pSvgX + 4).attr("y1", pSvgY)
+          .attr("x2", rtBoxX - 1).attr("y2", pSvgY)
+          .attr("stroke", "#1565C0").attr("stroke-width", 0.9)
+          .attr("stroke-dasharray", "4,3")
+          .attr("opacity", 0.8);
+      // ── Connector: best ALFWorld leaf → left-bottom box ──
+      const msLeaf = bestLeafByD[2];
+      if (msLeaf) {
+        const msLocalX = px(msLeaf);
+        const msLocalY = py(msLeaf);
+        const rotRad3 = 12 * Math.PI / 180;
+        const msSvgX = CX + msLocalX * Math.cos(rotRad3) - msLocalY * Math.sin(rotRad3);
+        const msSvgY = CY + msLocalX * Math.sin(rotRad3) + msLocalY * Math.cos(rotRad3);
+        const lbBoxRightX = BOX_MARGIN_OUTER + 25 + BOX_W;
+        svg.append("line")
+          .attr("x1", lbBoxRightX + 1).attr("y1", msSvgY)
+          .attr("x2", msSvgX - 4).attr("y2", msSvgY)
+          .attr("stroke", "#00838F").attr("stroke-width", 0.9)
+          .attr("stroke-dasharray", "4,3")
+          .attr("opacity", 0.8);
+      // ── Connector: best HB leaf → right-bottom box ──
+      const ssLeaf = bestLeafByD[1];
+      if (ssLeaf) {
+        const ssLocalX = px(ssLeaf);
+        const ssLocalY = py(ssLeaf);
+        const rotRad4 = 12 * Math.PI / 180;
+        const ssSvgX = CX + ssLocalX * Math.cos(rotRad4) - ssLocalY * Math.sin(rotRad4);
+        const ssSvgY = CY + ssLocalX * Math.sin(rotRad4) + ssLocalY * Math.cos(rotRad4);
+        const rbBoxLeftX = PANEL_W + TREE_W + BOX_MARGIN_INNER;
+        svg.append("line")
+          .attr("x1", ssSvgX + 4).attr("y1", ssSvgY)
+          .attr("x2", rbBoxLeftX - 1).attr("y2", ssSvgY)
+          .attr("stroke", "#D81B60").attr("stroke-width", 0.9)
+          .attr("stroke-dasharray", "4,3")
+          .attr("opacity", 0.8);
+      }
+      }
+      }
+      }
+
+      // Domain labels — append a NEW group at the end of svg so it sits
+      // above both the tree strokes and the panel dashed connectors.
+      // Group z-order is determined by position in svg.children; appending
+      // late is the only way to stack this above earlier siblings.
+      const gDomainLabels = svg.append("g")
+        .attr("transform", `translate(${CX},${CY})`);
+      DC.forEach((dom, i) => {
+        const leaves = root.leaves().filter(l => l.data.d === i);
+        if (!leaves.length) return;
+        const midAngle = d3.mean(leaves, l => l.x);
+        const lr = TR + 24;
+        const lx = lr * Math.sin(midAngle);
+        const ly = -lr * Math.cos(midAngle);
+        let rot = midAngle * 180 / Math.PI;
+        const flip = rot > 90 && rot < 270;
+        if (flip) rot += 180;
+        gDomainLabels.append("text")
+          .attr("x", lx).attr("y", ly)
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", flip ? "text-before-edge" : "text-after-edge")
+          .attr("fill", dom.c)
+          .attr("stroke", "white").attr("stroke-width", 3)
+          .attr("paint-order", "stroke")
+          .attr("stroke-linejoin", "round")
+          .attr("font-size", "13px").attr("font-weight", "600")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("transform", `rotate(${rot},${lx},${ly})`)
+          .text(dom.name);
+      });
+    }
+
+    // ── Right-top box content: Conversation (LoCoMo) ─────────────────
+    {
+      const rpX = PANEL_W + TREE_W;
+      const rbx = rpX + BOX_MARGIN_INNER;
+      const totalH = BOX_H * 2 + BOX_GAP;
+      const rby = (H - totalH) / 2;
+      const rbw = BOX_W, rbh = BOX_H;
+      const convColor = "#1565C0";
+      const pad = 6;
+      const g = svg.append("g");
+
+      // Section heights: 2/5 task, 2/5 memory, 1/5 agent
+      const sec1H = rbh * 2 / 5;
+      const sec2H = rbh * 2 / 5;
+      const sec3H = rbh * 1 / 5;
+      const sec1Y = rby;
+      const sec2Y = rby + sec1H;
+      const sec3Y = rby + sec1H + sec2H;
+
+      // Divider lines
+      [sec2Y, sec3Y].forEach(dy => {
+        g.append("line")
+          .attr("x1", rbx + 4).attr("y1", dy)
+          .attr("x2", rbx + rbw - 4).attr("y2", dy)
+          .attr("stroke", "#a0c4e8").attr("stroke-width", 0.5)
+          .attr("stroke-dasharray", "3,2");
+      });
+
+      // Helper: draw section heading
+      const headingH = 16;
+      function drawConvHeading(secY, iconSvg, label) {
+        const iconS = 12;
+        const scale = iconS / 24;
+        const iconX = rbx + pad;
+        const iconY = secY + 2;
+        g.append("g")
+          .attr("transform", `translate(${iconX},${iconY}) scale(${scale})`)
+          .attr("fill", "none").attr("stroke", convColor)
+          .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+          .html(iconSvg);
+        g.append("text")
+          .attr("x", iconX + iconS + 3).attr("y", secY + 11)
+          .attr("font-size", "8.4px").attr("font-weight", "700")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", convColor)
+          .text(label);
+      }
+
+      // ═══ Section 1: Task (2/5) ═══
+      drawConvHeading(sec1Y,
+        `<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/>`,
+        "Task: Conversations");
+
+      // Three chat bubbles: Jon's msg, Gina's msg, then the question
+      const bubbleX = rbx + pad;
+      const bubbleW = rbw - pad * 2 - 6;
+      const areaTop = sec1Y + headingH + 2;
+      const areaH = sec1H - headingH - pad - 2;
+      const bGap = 3;
+      const bH = (areaH - bGap * 2) / 3;
+
+      // User icon helper
+      const userIconSvg = `<path d="M17.925 20.056a6 6 0 0 0-11.851.001"/><circle cx="12" cy="11" r="4"/><circle cx="12" cy="12" r="10"/>`;
+      function drawUserIcon(x, y, name, color) {
+        const iconS = 14;
+        const scale = iconS / 24;
+        g.append("g")
+          .attr("transform", `translate(${x},${y}) scale(${scale})`)
+          .attr("fill", "none").attr("stroke", color)
+          .attr("stroke-width", 1.8).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+          .html(userIconSvg);
+        g.append("text")
+          .attr("x", x + iconS / 2).attr("y", y + iconS + 7)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "5.5px").attr("font-weight", "600")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", color)
+          .text(name);
+      }
+
+      // Layout: icons on edges, bubbles in middle
+      const iconW = 18; // icon + label space
+      const chatX = bubbleX + iconW;
+      const chatW = bubbleW - iconW;
+
+      // Bubble 1: Jon (right-aligned, 60% width)
+      const b1Y = areaTop;
+      const b1W = chatW * 0.55;
+      const b1X = bubbleX + bubbleW - b1W;
+      // Jon icon to the right of bubble
+      drawUserIcon(bubbleX + bubbleW - iconW + 2, b1Y - 1, "Jon", "#0d47a1");
+      g.append("rect")
+        .attr("x", b1X - iconW).attr("y", b1Y)
+        .attr("width", b1W).attr("height", bH)
+        .attr("rx", 4).attr("fill", "#e3f2fd")
+        .attr("stroke", convColor).attr("stroke-width", 0.5);
+      g.append("text")
+        .attr("x", b1X - iconW + b1W - 4).attr("y", b1Y + bH / 2 + 3)
+        .attr("text-anchor", "end")
+        .attr("font-size", "6.5px")
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("fill", "#0d47a1")
+        .text("I dance to destress");
+
+      // Bubble 2: Gina (left-aligned, 80% width)
+      const b2Y = b1Y + bH + bGap;
+      const b2W = chatW * 0.68;
+      // Gina icon to the left
+      drawUserIcon(bubbleX, b2Y - 1, "Gina", "#3949ab");
+      g.append("rect")
+        .attr("x", bubbleX + iconW).attr("y", b2Y)
+        .attr("width", b2W).attr("height", bH)
+        .attr("rx", 4).attr("fill", "#e8eaf6")
+        .attr("stroke", "#3949ab").attr("stroke-width", 0.5);
+      g.append("text")
+        .attr("x", bubbleX + iconW + 4).attr("y", b2Y + bH / 2 + 3)
+        .attr("font-size", "6.5px")
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("fill", "#1a237e")
+        .text("Dancing helps me relax");
+
+      // Bubble 3: Question (right-aligned, 75% width, with tail)
+      const b3Y = b2Y + bH + bGap;
+      const b3W = chatW * 0.75;
+      const b3X = bubbleX + bubbleW - b3W;
+      g.append("rect")
+        .attr("x", b3X).attr("y", b3Y)
+        .attr("width", b3W).attr("height", bH)
+        .attr("rx", 4).attr("fill", "#f0f7ff")
+        .attr("stroke", convColor).attr("stroke-width", 0.6);
+      // Tail
+      const tailX = b3X + b3W - 10;
+      const tailY = b3Y + bH;
+      g.append("path")
+        .attr("d", `M${tailX},${tailY} L${tailX + 5},${tailY + 5} L${tailX + 6},${tailY}`)
+        .attr("fill", "#f0f7ff")
+        .attr("stroke", convColor).attr("stroke-width", 0.6);
+      g.append("line")
+        .attr("x1", tailX - 0.5).attr("y1", tailY)
+        .attr("x2", tailX + 6.5).attr("y2", tailY)
+        .attr("stroke", "#f0f7ff").attr("stroke-width", 1.5);
+      g.append("text")
+        .attr("x", b3X + b3W - 4).attr("y", b3Y + bH / 2 + 3)
+        .attr("text-anchor", "end")
+        .attr("font-size", "6.5px")
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("fill", "#1565C0")
+        .text("How do they both destress?");
+
+      // ═══ Section 2: Memory (2/5) ═══
+      drawConvHeading(sec2Y,
+        `<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>`,
+        "Memory: Entity Graph");
+
+      // ── Knowledge graph ──
+      const graphTop = sec2Y + headingH + 4;
+      const graphH = sec3Y - graphTop - 4;
+      const graphCX = rbx + rbw / 2;
+      const graphCY = graphTop + graphH / 2;
+
+      // Node definitions: {x, y, label, icon, highlight}
+      const nodeR = 5;
+      const nodes = [
+        { id: "jon",     x: graphCX - 28, y: graphCY - 4,  label: "Jon",      highlight: true,  person: true, color: "#0d47a1" },
+        { id: "gina",    x: graphCX + 34, y: graphCY - 10, label: "Gina",     highlight: true,  person: true, color: "#3949ab" },
+        { id: "dancing", x: graphCX + 5,  y: graphCY - 24, label: "dancing",  highlight: true,  person: false, color: "#1565C0" },
+        { id: "banker",  x: graphCX - 55, y: graphCY - 20, label: "banker",   highlight: false, person: false, color: "#78909c" },
+        { id: "doordash",x: graphCX + 56, y: graphCY - 26, label: "DoorDash", highlight: false, person: false, color: "#78909c" },
+        { id: "biz",     x: graphCX - 8,  y: graphCY + 16, label: "business", highlight: false, person: false, color: "#78909c" },
+        { id: "studio",  x: graphCX + 48, y: graphCY + 12, label: "studio",   highlight: false, person: false, color: "#78909c" },
+      ];
+
+      // Edge definitions: {from, to, label, highlight}
+      const edges = [
+        { from: "jon",  to: "dancing",  label: "destress", highlight: true },
+        { from: "gina", to: "dancing",  label: "relax",    highlight: true },
+        { from: "jon",  to: "banker",   label: "lost job",  highlight: false },
+        { from: "gina", to: "doordash", label: "lost job",  highlight: false },
+        { from: "jon",  to: "biz",      label: "started",   highlight: false },
+        { from: "gina", to: "biz",      label: "started",   highlight: false },
+        { from: "jon",  to: "studio",   label: "",           highlight: false },
+        { from: "studio", to: "biz",    label: "opened",    highlight: false },
+      ];
+
+      const nodeMap = {};
+      nodes.forEach(n => nodeMap[n.id] = n);
+
+      // Draw edges
+      edges.forEach(e => {
+        const from = nodeMap[e.from], to = nodeMap[e.to];
+        const dx = to.x - from.x, dy = to.y - from.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const sx = from.x + dx/dist * nodeR, sy = from.y + dy/dist * nodeR;
+        const ex = to.x - dx/dist * nodeR,   ey = to.y - dy/dist * nodeR;
+        g.append("line")
+          .attr("x1", sx).attr("y1", sy)
+          .attr("x2", ex).attr("y2", ey)
+          .attr("stroke", e.highlight ? "#1565C0" : "#ccc")
+          .attr("stroke-width", e.highlight ? 1.2 : 0.5)
+          .attr("opacity", e.highlight ? 0.9 : 0.5);
+        // Edge label
+        const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+        g.append("text")
+          .attr("x", mx).attr("y", my - 2)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "4px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", e.highlight ? "#1565C0" : "#999")
+          .text(e.label);
+      });
+
+      // Draw nodes
+      const personIconSmall = `<path d="M17.925 20.056a6 6 0 0 0-11.851.001"/><circle cx="12" cy="11" r="4"/><circle cx="12" cy="12" r="10"/>`;
+      const activityIcon = `<circle cx="12" cy="12" r="10"/>`;
+
+      nodes.forEach(n => {
+        if (n.person) {
+          // Person node: user icon
+          const iS = nodeR * 2.2;
+          const sc = iS / 24;
+          g.append("g")
+            .attr("transform", `translate(${n.x - iS/2},${n.y - iS/2}) scale(${sc})`)
+            .attr("fill", n.highlight ? "#e3f2fd" : "none")
+            .attr("stroke", n.color)
+            .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+            .html(personIconSmall);
+        } else {
+          // Fact node: circle
+          g.append("circle")
+            .attr("cx", n.x).attr("cy", n.y).attr("r", nodeR)
+            .attr("fill", n.highlight ? "#e3f2fd" : "#f5f5f5")
+            .attr("stroke", n.highlight ? "#1565C0" : "#bbb")
+            .attr("stroke-width", n.highlight ? 1.2 : 0.6);
+        }
+        // Label below node
+        g.append("text")
+          .attr("x", n.x).attr("y", n.y + nodeR + 8)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "5px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", n.highlight ? n.color : "#888")
+          .attr("font-weight", n.highlight ? "600" : "400")
+          .text(n.label);
+      });
+
+      // ═══ Section 3: Agent (1/5) ═══
+      drawConvHeading(sec3Y,
+        `<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>`,
+        "Agent");
+
+      const convOutLines = [
+        "Both Jon and Gina like to destress",
+        "by dancing, as mentioned in sessions 3 and 5."
+      ];
+      convOutLines.forEach((line, i) => {
+        g.append("text")
+          .attr("x", rbx + pad).attr("y", sec3Y + headingH + 7 + i * 9)
+          .attr("font-size", "7.1px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", "#1565C0")
+          .text(line);
+      });
+    }
+
+    // ── Left-bottom box content: Embodied AI (ALFWorld) ──────────────
+    {
+      const lbx = BOX_MARGIN_OUTER + 25;
+      const totalH = BOX_H * 2 + BOX_GAP;
+      const lby = (H - totalH) / 2 + BOX_H + BOX_GAP;
+      const lbw = BOX_W, lbh = BOX_H;
+      const alfColor = "#00838F";
+      const pad = 6;
+      const g = svg.append("g");
+
+      // Section heights: 2/5 task, 2/5 memory, 1/5 agent
+      const sec1H = lbh * 2 / 5;
+      const sec2H = lbh * 2 / 5;
+      const sec3H = lbh * 1 / 5;
+      const sec1Y = lby;
+      const sec2Y = lby + sec1H;
+      const sec3Y = lby + sec1H + sec2H;
+
+      // Divider lines
+      [sec2Y, sec3Y].forEach(dy => {
+        g.append("line")
+          .attr("x1", lbx + 4).attr("y1", dy)
+          .attr("x2", lbx + lbw - 4).attr("y2", dy)
+          .attr("stroke", "#80cbc4").attr("stroke-width", 0.5)
+          .attr("stroke-dasharray", "3,2");
+      });
+
+      // Helper: draw section heading
+      const headingH = 16;
+      function drawAlfHeading(secY, iconSvg, label) {
+        const iconS = 12;
+        const scale = iconS / 24;
+        const iconX = lbx + pad;
+        const iconY = secY + 2;
+        g.append("g")
+          .attr("transform", `translate(${iconX},${iconY}) scale(${scale})`)
+          .attr("fill", "none").attr("stroke", alfColor)
+          .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+          .html(iconSvg);
+        g.append("text")
+          .attr("x", iconX + iconS + 3).attr("y", secY + 11)
+          .attr("font-size", "8.4px").attr("font-weight", "700")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", alfColor)
+          .text(label);
+      }
+
+      // ═══ Section 1: Task (2/5) ═══
+      drawAlfHeading(sec1Y,
+        `<path d="M10 18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H5a3 3 0 0 1-3-3 1 1 0 0 1 1-1z"/><path d="M13 10H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1l-.81 3.242a1 1 0 0 1-.97.758H8"/><path d="M14 4h3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-3"/><path d="M18 6h4"/><path d="m5 10-2 8"/><path d="m7 18 2-8"/>`,
+        "Task: Embodied Actions");
+
+      // ── Room floor plan (top-down) + instruction at bottom ──
+      const taskTopY = sec1Y + headingH + 2;
+      const taskAreaH = sec1H - headingH - 6;
+      const roomH = taskAreaH * 0.7;
+      const instrH = taskAreaH - roomH - 2;
+      const roomSideP = 16;
+      const roomX = lbx + roomSideP;
+      const roomY = taskTopY;
+      const roomW = lbw - roomSideP * 2;
+
+      // ── Minimalist room with stack effect ──
+      [4, 2].forEach(offset => {
+        g.append("rect")
+          .attr("x", roomX + offset).attr("y", roomY + offset)
+          .attr("width", roomW).attr("height", roomH)
+          .attr("rx", 1).attr("fill", "#e0f2f1")
+          .attr("stroke", alfColor).attr("stroke-width", 0.3)
+          .attr("opacity", 0.3);
+      });
+      g.append("rect")
+        .attr("x", roomX).attr("y", roomY)
+        .attr("width", roomW).attr("height", roomH)
+        .attr("rx", 1).attr("fill", "#e0f2f1").attr("opacity", 0.35)
+        .attr("stroke", "#004d40").attr("stroke-width", 1.4);
+
+      // Checkerboard pattern
+      for (let c = 0; c < 5; c++) {
+        for (let r = 0; r < 3; r++) {
+          if ((c + r) % 2 === 1) {
+            g.append("rect")
+              .attr("x", roomX + c * roomW / 5)
+              .attr("y", roomY + r * roomH / 3)
+              .attr("width", roomW / 5)
+              .attr("height", roomH / 3)
+              .attr("fill", alfColor).attr("opacity", 0.08);
+          }
+        }
+      }
+
+      // Grid lines
+      for (let c = 1; c < 5; c++) {
+        g.append("line")
+          .attr("x1", roomX + roomW / 5 * c).attr("y1", roomY)
+          .attr("x2", roomX + roomW / 5 * c).attr("y2", roomY + roomH)
+          .attr("stroke", alfColor).attr("stroke-width", 0.4).attr("opacity", 0.5);
+      }
+      for (let r = 1; r < 3; r++) {
+        g.append("line")
+          .attr("x1", roomX).attr("y1", roomY + roomH / 3 * r)
+          .attr("x2", roomX + roomW).attr("y2", roomY + roomH / 3 * r)
+          .attr("stroke", alfColor).attr("stroke-width", 0.4).attr("opacity", 0.5);
+      }
+
+      // Grid system: 5 cols x 3 rows
+      const gCols = 5, gRows = 3;
+      const cellW = roomW / gCols, cellH = roomH / gRows;
+      const gcx = (c) => roomX + (c + 0.5) * cellW;  // cell center x
+      const gcy = (r) => roomY + (r + 0.5) * cellH;  // cell center y
+
+      const iconS = 10;
+      const iScale = iconS / 24;
+
+      // Icons placed on grid cells: {col, row, svg, label}
+      const icons = [
+        { c: 0, r: 0, svg: `<path d="M5 6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Z"/><path d="M5 10h14"/><path d="M15 7v6"/>` },
+        { c: 1, r: 0, svg: `<path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M4 18v2"/><path d="M20 18v2"/><path d="M12 4v9"/>` },
+        { c: 2, r: 0, svg: `<path d="M11 8c2-3-2-3 0-6"/><path d="M15.5 8c2-3-2-3 0-6"/><path d="M6 10h.01"/><path d="M6 14h.01"/><path d="M10 16v-4"/><path d="M14 16v-4"/><path d="M18 16v-4"/><path d="M20 6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3"/><path d="M5 20v2"/><path d="M19 20v2"/>` },
+        { c: 4, r: 0, svg: `<path d="M12 2v5"/><path d="M14.829 15.998a3 3 0 1 1-5.658 0"/><path d="M20.92 14.606A1 1 0 0 1 20 16H4a1 1 0 0 1-.92-1.394l3-7A1 1 0 0 1 7 7h10a1 1 0 0 1 .92.606z"/>` },
+        { c: 1, r: 1, svg: `<path d="M7 21h10"/><rect width="20" height="14" x="2" y="3" rx="2"/>` },
+        { c: 3, r: 1, svg: `<path d="M11 6 8 9"/><path d="m16 7-8 8"/><rect x="4" y="2" width="16" height="20" rx="2"/>` },
+      ];
+
+      icons.forEach(ic => {
+        const ix = gcx(ic.c) - iconS / 2;
+        const iy = gcy(ic.r) - iconS / 2;
+        g.append("g")
+          .attr("transform", `translate(${ix},${iy}) scale(${iScale})`)
+          .attr("fill", "none")
+          .attr("stroke", "#37474f")
+          .attr("stroke-width", 1.6)
+          .attr("stroke-linecap", "round")
+          .attr("stroke-linejoin", "round")
+          .html(ic.svg);
+      });
+
+      // Orthogonal agent path: fridge(0,0) → right → up to lamp(4,0)
+      defs.append("marker")
+        .attr("id", "alf-arrow")
+        .attr("viewBox", "0 0 6 6").attr("refX", 5).attr("refY", 3)
+        .attr("markerWidth", 4).attr("markerHeight", 4)
+        .attr("orient", "auto")
+        .append("path").attr("d", "M0,0 L6,3 L0,6 Z").attr("fill", alfColor);
+
+      // Path: fridge(0,0) ↓ r2 → r2 ↑ lamp(4,0). r2 and c0/c4 at r1 are empty.
+      const pathD = `M${gcx(0)},${gcy(0) + iconS/2 + 1} V${gcy(2)} H${gcx(4)} V${gcy(0) + iconS/2 + 1}`;
+      g.append("path")
+        .attr("d", pathD)
+        .attr("fill", "none")
+        .attr("stroke", alfColor).attr("stroke-width", 0.8)
+        .attr("stroke-dasharray", "2,1.5")
+        .attr("opacity", 0.5)
+        .attr("marker-end", "url(#alf-arrow)");
+
+      // Instruction text at bottom
+      const instrY = roomY + roomH + 3;
+      g.append("text")
+        .attr("x", lbx + pad).attr("y", instrY + instrH / 2 + 2)
+        .attr("font-size", "7px")
+        .attr("font-family", '"Source Code Pro", monospace')
+        .attr("fill", "#004d40")
+        .text("> Put a clean mug in cabinet");
+
+      // ═══ Section 2: Memory (2/5) ═══
+      drawAlfHeading(sec2Y,
+        `<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.9-1.9"/>`,
+        "Memory: Trajectory Lookup");
+
+      // Trajectory lookup list
+      const tX = lbx + pad;
+      const tY = sec2Y + headingH + 2;
+      const tW = lbw - pad * 2;
+      const tRowH = 10;
+      const indent = 10;
+      const trajs = [
+        { text: "bat → pick up → bed",                 match: false, fade: 0.3 },
+        { text: "plate → sink → clean → cabinet",     match: false },
+        { text: "mug → sink → clean → cabinet",        match: true },
+        { text: "apple → microwave → heat → fridge",   match: false },
+        { text: "bread → fridge → cool → counter",     match: false, fade: 0.3 },
+      ];
+
+      trajs.forEach((t, i) => {
+        const ry = tY + i * tRowH;
+        if (t.match) {
+          // Corner brackets with light background
+          const bx = tX + indent - 2, by = ry + 3;
+          const bw = tW - indent - 8, bh = tRowH;
+          // Light fill
+          g.append("rect")
+            .attr("x", bx).attr("y", by)
+            .attr("width", bw).attr("height", bh)
+            .attr("fill", "#e0f2f1").attr("opacity", 0.4);
+          const bLen = 3;
+          // Top-left
+          g.append("path").attr("d", `M${bx},${by+bLen} V${by} H${bx+bLen}`)
+            .attr("fill", "none").attr("stroke", alfColor).attr("stroke-width", 0.8);
+          // Top-right
+          g.append("path").attr("d", `M${bx+bw-bLen},${by} H${bx+bw} V${by+bLen}`)
+            .attr("fill", "none").attr("stroke", alfColor).attr("stroke-width", 0.8);
+          // Bottom-left
+          g.append("path").attr("d", `M${bx},${by+bh-bLen} V${by+bh} H${bx+bLen}`)
+            .attr("fill", "none").attr("stroke", alfColor).attr("stroke-width", 0.8);
+          // Bottom-right
+          g.append("path").attr("d", `M${bx+bw-bLen},${by+bh} H${bx+bw} V${by+bh-bLen}`)
+            .attr("fill", "none").attr("stroke", alfColor).attr("stroke-width", 0.8);
+          // Arrow indicator (sticks out left of indent)
+          g.append("text")
+            .attr("x", tX).attr("y", ry + 10)
+            .attr("font-size", "9px")
+            .attr("font-family", '"Libertinus Sans", sans-serif')
+            .attr("fill", alfColor).attr("font-weight", "600")
+            .text("▸");
+        }
+        g.append("text")
+          .attr("x", tX + indent)
+          .attr("y", ry + 10)
+          .attr("font-size", "7.5px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", t.match ? alfColor : "#999")
+          .attr("font-weight", t.match ? "600" : "400")
+          .attr("opacity", t.fade || 1)
+          .text(t.text);
+      });
+
+      // ═══ Section 3: Agent (1/5) ═══
+      drawAlfHeading(sec3Y,
+        `<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>`,
+        "Agent");
+
+      const alfOutLines = [
+        "go to sink → clean mug → go to",
+        "cabinet → put mug in cabinet ✓"
+      ];
+      alfOutLines.forEach((line, i) => {
+        g.append("text")
+          .attr("x", lbx + pad).attr("y", sec3Y + headingH + 7 + i * 9)
+          .attr("font-size", "7.1px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", alfColor)
+          .text(line);
+      });
+    }
+
+    // ── Right-bottom box content: Healthcare (HealthBench) ───────────
+    {
+      const rpX = PANEL_W + TREE_W;
+      const rbx = rpX + BOX_MARGIN_INNER;
+      const totalH = BOX_H * 2 + BOX_GAP;
+      const rby = (H - totalH) / 2 + BOX_H + BOX_GAP;
+      const rbw = BOX_W, rbh = BOX_H;
+      const hbColor = "#D81B60";
+      const pad = 6;
+      const g = svg.append("g");
+
+      // Section heights: 2/5 task, 2/5 memory, 1/5 agent
+      const sec1H = rbh * 2 / 5;
+      const sec2H = rbh * 2 / 5;
+      const sec3H = rbh * 1 / 5;
+      const sec1Y = rby;
+      const sec2Y = rby + sec1H;
+      const sec3Y = rby + sec1H + sec2H;
+
+      // Divider lines
+      [sec2Y, sec3Y].forEach(dy => {
+        g.append("line")
+          .attr("x1", rbx + 4).attr("y1", dy)
+          .attr("x2", rbx + rbw - 4).attr("y2", dy)
+          .attr("stroke", "#f48fb1").attr("stroke-width", 0.5)
+          .attr("stroke-dasharray", "3,2");
+      });
+
+      // Helper: draw section heading
+      const headingH = 16;
+      function drawHbHeading(secY, iconSvg, label) {
+        const iconS = 12;
+        const scale = iconS / 24;
+        const iconX = rbx + pad;
+        const iconY = secY + 2;
+        g.append("g")
+          .attr("transform", `translate(${iconX},${iconY}) scale(${scale})`)
+          .attr("fill", "none").attr("stroke", hbColor)
+          .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+          .html(iconSvg);
+        g.append("text")
+          .attr("x", iconX + iconS + 3).attr("y", secY + 11)
+          .attr("font-size", "8.4px").attr("font-weight", "700")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", hbColor)
+          .text(label);
+      }
+
+      // ═══ Section 1: Task (2/5) ═══
+      drawHbHeading(sec1Y,
+        `<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/>`,
+        "Task: Medical QA");
+
+      // 2x2 patient status capsules (pill style: left icon half + right text half)
+      const capTop = sec1Y + headingH + 2;
+      const capW = (rbw - pad * 2 - 4) / 2;
+      const capH = 14;
+      const capGap = 3;
+      const capIconW = capW * 0.35; // left colored portion
+      const caps = [
+        { c: 0, r: 0, text: "LDL: 92",     icon: `<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>` },
+        { c: 1, r: 0, text: "HDL: 64",      icon: `<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>` },
+        { c: 0, r: 1, text: "Age: 45F",     icon: `<path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"/>` },
+        { c: 1, r: 1, text: "Lipid panel",  icon: `<path d="M11 2v2"/><path d="M5 2v2"/><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>` },
+      ];
+      caps.forEach(cap => {
+        const cx = rbx + pad + cap.c * (capW + capGap);
+        const cy = capTop + cap.r * (capH + capGap);
+        // Full capsule outline
+        g.append("rect")
+          .attr("x", cx).attr("y", cy)
+          .attr("width", capW).attr("height", capH)
+          .attr("rx", capH / 2).attr("fill", "none")
+          .attr("stroke", hbColor).attr("stroke-width", 0.5);
+        // Left half filled
+        g.append("clipPath").attr("id", `cap-clip-${cap.c}-${cap.r}`)
+          .append("rect").attr("x", cx).attr("y", cy).attr("width", capIconW).attr("height", capH);
+        g.append("rect")
+          .attr("x", cx).attr("y", cy)
+          .attr("width", capW).attr("height", capH)
+          .attr("rx", capH / 2).attr("fill", "#fce4ec")
+          .attr("clip-path", `url(#cap-clip-${cap.c}-${cap.r})`);
+        // Icon in left half
+        const icoS = capH * 0.6;
+        const icoScale = icoS / 24;
+        g.append("g")
+          .attr("transform", `translate(${cx + (capIconW - icoS) / 2},${cy + (capH - icoS) / 2}) scale(${icoScale})`)
+          .attr("fill", "none").attr("stroke", hbColor)
+          .attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+          .html(cap.icon);
+        // Text on right half, left-aligned
+        g.append("text")
+          .attr("x", cx + capIconW + 4).attr("y", cy + capH / 2 + 3)
+          .attr("font-size", "7.5px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", hbColor).attr("font-weight", "500")
+          .text(cap.text);
+      });
+
+      // Question bubble below capsules
+      const qY = capTop + 2 * (capH + capGap) + 2;
+      const qW = rbw - pad * 2;
+      const qH = sec1H - headingH - 2 * (capH + capGap) - 14;
+      g.append("rect")
+        .attr("x", rbx + pad).attr("y", qY)
+        .attr("width", qW).attr("height", qH)
+        .attr("rx", 4).attr("fill", "#fff0f3")
+        .attr("stroke", hbColor).attr("stroke-width", 0.6);
+      // Tail
+      const qtX = rbx + pad + qW - 12;
+      const qtY = qY + qH;
+      g.append("path")
+        .attr("d", `M${qtX},${qtY} L${qtX + 5},${qtY + 4} L${qtX + 6},${qtY}`)
+        .attr("fill", "#fff0f3")
+        .attr("stroke", hbColor).attr("stroke-width", 0.6);
+      g.append("line")
+        .attr("x1", qtX - 0.5).attr("y1", qtY)
+        .attr("x2", qtX + 6.5).attr("y2", qtY)
+        .attr("stroke", "#fff0f3").attr("stroke-width", 1.5);
+      g.append("text")
+        .attr("x", rbx + pad + 4).attr("y", qY + qH / 2 + 3)
+        .attr("font-size", "8px")
+        .attr("font-family", '"Libertinus Sans", sans-serif')
+        .attr("fill", "#880e4f")
+        .text("Is her cholesterol in normal range?");
+
+      // ═══ Section 2: Memory (2/5) ═══
+      drawHbHeading(sec2Y,
+        `<path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/>`,
+        "Memory: Checklist Templates");
+
+      // ── Stacked notepads (left) + extracted checklist (right) ──
+      const memTop = sec2Y + headingH + 2;
+      const memH = sec3Y - memTop - 4;
+      const stackW = (rbw - pad * 2) * 0.35;
+      const stackH = memH - 4;
+      const stackX = rbx + pad;
+      const stackY = memTop;
+
+      // Stack of notepads (3 layers) with notepad-text style
+      const npH = stackH - 5;
+      const tabH = 4; // tabs sticking out top
+
+      [5, 3, 0].forEach((off, i) => {
+        const isTop = i === 2;
+        const nx = stackX + off, ny = stackY + off + tabH;
+        const opacity = isTop ? 1 : 0.45;
+
+        // Main body
+        g.append("rect")
+          .attr("x", nx).attr("y", ny)
+          .attr("width", stackW).attr("height", npH - tabH)
+          .attr("rx", 2)
+          .attr("fill", isTop ? "#fff0f3" : "#fce4ec")
+          .attr("stroke", hbColor)
+          .attr("stroke-width", isTop ? 0.7 : 0.3)
+          .attr("opacity", opacity);
+
+        // Binding rings (spiral notebook: ring goes through the paper, bottom-right quarter hidden)
+        if (isTop) {
+          const ringRx = 2, ringRy = 3.5;
+          [0.15, 0.38, 0.62, 0.85].forEach(frac => {
+            const rcx = nx + stackW * frac;
+            g.append("path")
+              .attr("d", `M${rcx},${ny + ringRy} A${ringRx},${ringRy} 0 1 1 ${rcx + ringRx},${ny}`)
+              .attr("fill", "none")
+              .attr("stroke", hbColor).attr("stroke-width", 0.7);
+          });
+
+          // Content lines (varying lengths for realism)
+          const lineX1 = nx + 4, lineX2 = nx + stackW - 4;
+          const lineStart = ny + 10;
+          const lineGap = 5;
+          const lineLens = [0.7, 0.9, 0.55, 0.8, 0.4];
+          lineLens.forEach((len, li) => {
+            g.append("line")
+              .attr("x1", lineX1).attr("y1", lineStart + li * lineGap)
+              .attr("x2", lineX1 + (lineX2 - lineX1) * len).attr("y2", lineStart + li * lineGap)
+              .attr("stroke", hbColor).attr("stroke-width", 0.4).attr("opacity", 0.3);
+          });
+        }
+      });
+
+      // Arrow from stack to checklist
+      const arrowX1 = stackX + stackW + 4;
+      const arrowX2 = stackX + stackW + 22;
+      const arrowY = stackY + stackH / 2 - 2;
+      g.append("line")
+        .attr("x1", arrowX1).attr("y1", arrowY)
+        .attr("x2", arrowX2).attr("y2", arrowY)
+        .attr("stroke", hbColor).attr("stroke-width", 1.2)
+        .attr("marker-end", "url(#hb-arrow)");
+
+      defs.append("marker")
+        .attr("id", "hb-arrow")
+        .attr("viewBox", "0 0 6 6").attr("refX", 5).attr("refY", 3)
+        .attr("markerWidth", 4).attr("markerHeight", 4)
+        .attr("orient", "auto")
+        .append("path").attr("d", "M0,0 L6,3 L0,6 Z").attr("fill", hbColor);
+
+      // Extracted checklist notepad (right, shorter)
+      const clX = arrowX2 + 2;
+      const clW = rbx + rbw - pad - clX - 8;
+      const clH = npH - tabH;
+      const clY = stackY + tabH;
+      g.append("rect")
+        .attr("x", clX).attr("y", clY)
+        .attr("width", clW).attr("height", clH)
+        .attr("rx", 2).attr("fill", "#fff7f9")
+        .attr("stroke", hbColor).attr("stroke-width", 0.7);
+
+      // Checklist items
+      const checks = [
+        { text: "LDL",       ok: true },
+        { text: "HDL",       ok: true },
+        { text: "Total chol.", ok: false },
+        { text: "Triglyc.",   ok: false },
+      ];
+      const clItemH = (clH - 4) / checks.length;
+      checks.forEach((ck, i) => {
+        const iy = clY + 2 + i * clItemH;
+        const ix = clX + 5;
+        // Checkbox
+        g.append("rect")
+          .attr("x", ix).attr("y", iy + 1)
+          .attr("width", 5).attr("height", 5)
+          .attr("rx", 1)
+          .attr("fill", ck.ok ? "#e8f5e9" : "#ffebee")
+          .attr("stroke", ck.ok ? "#4caf50" : "#e53935")
+          .attr("stroke-width", 0.5);
+        if (ck.ok) {
+          g.append("path")
+            .attr("d", `M${ix+1},${iy+3.5} L${ix+2.5},${iy+5.5} L${ix+4.5},${iy+2}`)
+            .attr("fill", "none").attr("stroke", "#4caf50").attr("stroke-width", 0.7);
+        } else {
+          g.append("path")
+            .attr("d", `M${ix+1},${iy+2} L${ix+4.5},${iy+5.5} M${ix+4.5},${iy+2} L${ix+1},${iy+5.5}`)
+            .attr("fill", "none").attr("stroke", "#e53935").attr("stroke-width", 0.6);
+        }
+        // Label
+        g.append("text")
+          .attr("x", ix + 12).attr("y", iy + 6)
+          .attr("font-size", "7px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", ck.ok ? "#388e3c" : "#c62828")
+          .attr("font-weight", ck.ok ? "400" : "600")
+          .text(ck.text);
+      });
+
+      // ═══ Section 3: Agent (1/5) ═══
+      drawHbHeading(sec3Y,
+        `<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>`,
+        "Agent");
+
+      const hbOutLines = [
+        "Incomplete: total cholesterol and triglycerides",
+        "missing. Cannot confirm normal range."
+      ];
+      hbOutLines.forEach((line, i) => {
+        g.append("text")
+          .attr("x", rbx + pad).attr("y", sec3Y + headingH + 7 + i * 9)
+          .attr("font-size", "7.1px")
+          .attr("font-family", '"Libertinus Sans", sans-serif')
+          .attr("fill", hbColor)
+          .text(line);
+      });
+    }
+  </script>
+</body>
+</html>

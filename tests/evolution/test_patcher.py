@@ -2,7 +2,7 @@
 
 import pytest
 
-from programmaticmemory.evolution.patcher import apply_patch
+from mstar.evolution.patcher import apply_patch
 
 SOURCE = """\
 from dataclasses import dataclass

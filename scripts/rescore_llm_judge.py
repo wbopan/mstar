@@ -25,11 +25,11 @@ import re
 from pathlib import Path
 
 # Project imports
-from programmaticmemory.benchmarks.locomo import load_locomo
-from programmaticmemory.evolution.__main__ import split_val_test
-from programmaticmemory.evolution.evaluator import MemoryEvaluator, TokenF1Scorer
-from programmaticmemory.evolution.toolkit import ToolkitConfig, completion_with_retry
-from programmaticmemory.evolution.types import Dataset, KBProgram
+from mstar.benchmarks.locomo import load_locomo
+from mstar.evolution.__main__ import split_val_test
+from mstar.evolution.evaluator import MemoryEvaluator, TokenF1Scorer
+from mstar.evolution.toolkit import ToolkitConfig, completion_with_retry
+from mstar.evolution.types import Dataset, KBProgram
 
 OUTPUTS_DIR = Path(__file__).resolve().parent.parent / "outputs"
 JUDGE_MODEL = "azure/gpt-5.4-mini"
@@ -77,6 +77,8 @@ class LLMJudgeScorer:
             score,
             f'LLM judge (correctness). Verdict: {verdict}. Expected: "{expected}"',
         )
+
+
 MAX_WORKERS = 32
 
 # ---------------------------------------------------------------------------
@@ -188,7 +190,7 @@ def _reeval_run(
     # Patch _ThreadSafeSQLiteConnection to forward __setattr__ for row_factory etc.
     # The original runs didn't have this wrapper; programs that set self.db.row_factory
     # would silently set it on the proxy instead of the underlying connection.
-    from programmaticmemory.evolution.toolkit import _ThreadSafeSQLiteConnection
+    from mstar.evolution.toolkit import _ThreadSafeSQLiteConnection
 
     if not hasattr(_ThreadSafeSQLiteConnection, "_patched_setattr"):
 
@@ -221,14 +223,16 @@ def _reeval_run(
     for i, item in enumerate(dataset.test):
         output = eval_result.per_case_outputs[i] if i < len(eval_result.per_case_outputs) else ""
         score = eval_result.per_case_scores[i] if i < len(eval_result.per_case_scores) else 0.0
-        cases.append({
-            "question": item.question,
-            "output": output,
-            "expected_answer": item.expected_answer,
-            "score": score,
-        })
+        cases.append(
+            {
+                "question": item.question,
+                "output": output,
+                "expected_answer": item.expected_answer,
+                "score": score,
+            }
+        )
 
-    print(f"  Re-eval complete: {len(cases)} items, avg Token F1={sum(c['score'] for c in cases)/len(cases):.3f}")
+    print(f"  Re-eval complete: {len(cases)} items, avg Token F1={sum(c['score'] for c in cases) / len(cases):.3f}")
     return cases
 
 
@@ -425,9 +429,7 @@ def _rescore_run(
         summary[eval_key]["category_scores"] = {}
     # Store LLM judge category scores alongside existing ones (which are Token F1)
     summary[eval_key].setdefault("llm_judge_category_scores", {})
-    summary[eval_key]["llm_judge_category_scores"][program_hash] = {
-        cat: round(avg, 4) for cat, avg in cat_avgs.items()
-    }
+    summary[eval_key]["llm_judge_category_scores"][program_hash] = {cat: round(avg, 4) for cat, avg in cat_avgs.items()}
 
     return summary
 

@@ -1,6 +1,6 @@
 # 实验运行指南
 
-本文档说明如何配置环境并运行 Engram 论文的全部实验。
+本文档说明如何配置环境并运行 Mstar 论文的全部实验。
 
 ## 1. 环境配置
 
@@ -12,8 +12,8 @@
 ### 安装
 
 ```bash
-git clone https://github.com/wbopan/agent-memory-evolution.git
-cd agent-memory-evolution
+git clone https://github.com/wbopan/mstar.git
+cd mstar
 uv sync
 ```
 
@@ -199,7 +199,7 @@ done
 |------|---------|
 | Embedding API 报错 | 设置 `EMBEDDING_MODEL=local` 或添加 `--embedding-model local` |
 | Rate limit / 限速 | 降低 `--batch-concurrency`（默认 64，改为 2） |
-| ALFWorld 数据缺失 | `uv run python -c "from programmaticmemory.benchmarks.alfworld import ensure_data; ensure_data()"` |
+| ALFWorld 数据缺失 | `uv run python -c "from mstar.benchmarks.alfworld import ensure_data; ensure_data()"` |
 | HealthBench/PRBench 数据缺失 | 首次运行时自动从 HuggingFace 下载 |
 | 运行中断 | 直接重新执行同一脚本，自动恢复 |
 | 想换模型供应商 | 设置 `TASK_MODEL` / `REFLECT_MODEL` / `TOOLKIT_MODEL` 环境变量 |

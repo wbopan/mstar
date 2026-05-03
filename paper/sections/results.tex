@@ -1,0 +1,51 @@
+% === Table 1: Main Results ===
+
+% === Fig 3: Evolution Trajectory (D3 version) ===
+\input{figures/trajectory/evolution_trajectory}
+
+
+\section{Results}
+\label{sec:results}
+
+We organize the analysis around three questions: whether memory-program search improves task performance, whether the resulting programs differ structurally across tasks, and which evolved components drive the gains.
+
+\paragraph{Reflective code evolution progressively discovers better memory programs.}\looseness=-1
+Table~\ref{tab:main-results} shows that \sysname{} achieves the highest score on seven of eight reported metrics.
+Compared with the best baseline in each winning metric, the relative improvement is up to 31\%, with the largest gains on LoCoMo and PRBench.
+The strongest baseline changes across tasks.
+GEPA remains a strong baseline, especially on ALFWorld and PRBench.
+\sysname{} performs best on settings that require richer structured memory operations.
+This pattern suggests that executable code search reaches useful memory designs beyond the strongest fixed baselines.
+Figure~\ref{fig:evolution-trajectory} shows one ALFWorld evolution trajectory.
+In this run, early edits build a usable task-record schema, and later edits refine retrieval weights and action-selection checks.
+
+\paragraph{Different tasks produce structurally distinct optimal memory programs.}
+\input{tables/ablation}
+
+\input{figures/landscape/embedding_landscape}
+
+To understand how \sysname{} adapts memory program structure to different tasks, we visualize the program embedding landscape accumulated during evolution (Figure~\ref{fig:landscape}).
+For each task and iteration, we first sanitize the program by replacing strings and variable names with placeholders so that the embedding emphasizes structural differences.
+We then embed the sanitized programs with a code embedding model and project them with t-SNE~\citep{vandermaaten2008tsne}.
+The projection places the best programs for different benchmark configurations in separate regions, with markers indicating different storage architectures.
+The best ALFWorld program uses a compact SQLite action cache with read-time LLM synthesis.
+The best LoCoMo program uses ChromaDB semantic retrieval together with SQLite lexical and metadata scoring.
+Appendix~\ref{app:evolved-comparison} reports structural summaries, and the supplementary material includes full code for all best programs.
+
+\input{figures/comparison/cross_task_transfer}
+
+To further test whether these structures are task-specific, we evaluate the best evolved program from each source task on other target tasks (Figure~\ref{fig:task-optimized-memory}).
+In all three targets, the native evolved program outperforms transferred programs from other benchmarks.
+Five of six transferred programs perform worse than the universal seed baseline.
+This pattern suggests that memory program structure should be optimized together with the target task.
+
+
+\paragraph{Joint evolution of structure and policy enables task-specific adaptation.}
+Table~\ref{tab:ablation} isolates key design choices on LoCoMo.
+\rev{Each variant removes one component of \sysname{}: $-$\,Instruction lets only the code evolve and keeps the prompt instructions fixed; $-$\,Code does the opposite, evolving only the prompt instructions while keeping the code at the Vector Search seed; Max parent selection always picks the highest-scoring parent instead of sampling by softmax; and $-$\,Diversity drops the population pool and mutates only the current best program at each iteration.}
+Removing code evolution gives the largest drop, reducing F1 by 0.203.
+Removing Instruction optimization reduces F1 by 0.106.
+The full system also scores above variants that use max sampling or remove population diversity.
+These results indicate that joint optimization of program Logic and Instruction gives the strongest LoCoMo result.
+
+% === Table 2: Ablation ===

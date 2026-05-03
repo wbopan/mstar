@@ -1,0 +1,27 @@
+% §2 Problem Setting
+
+\section{Problem Setting}
+\label{sec:problem-setting}
+
+\rev{We consider a task $\mathcal{T} = (\mathcal{D}_\text{e}, \mathcal{D}_\text{v}, \mathcal{D}_\text{t})$, where $\mathcal{D}_\text{e} = \{e_1, \dots, e_N\}$ are trajectories of episodes representing past experiences, $\mathcal{D}_\text{v} = \{(q_1, y_1), \dots, (q_M, y_M)\}$ is a validation set of queries with corresponding ground-truth answers, and $\mathcal{D}_\text{t}$ is a held-out test set used only for final reporting.
+An agent $\mathcal{A}$ must memorize information from these past episodes to answer queries from $\mathcal{D}_\text{v}$ and $\mathcal{D}_\text{t}$.}
+Specifically, the agent is equipped with a knowledge base $\mathcal{K}$; it observes episodes in $\mathcal{D}_\text{e}$ and extracts knowledge items $k$ to populate this knowledge base $\mathcal{K}$.
+At test time, given a query $q_j$, the agent accesses $\mathcal{K}$, which returns relevant context \rev{$c_j = \mathcal{K}.\texttt{read}(q_j)$}.
+Building on this retrieved information, the agent then produces its answer or takes an action conditioned on both the query and the context:
+\begin{equation}
+\hat{y}_j = \mathcal{A}(q_j, \rev{c_j}).
+\label{eq:inference}
+\end{equation}
+
+\paragraph{Problem Definition: Task-Optimized Memory Program.}
+While several prior works have proposed fixed memory methods for agent systems, these generalist structures transfer poorly across task types~\citep{structmemeval}.
+To this end, we formalize task-specific memory optimization as search over executable memory programs.
+Each program $P$ defines the input and output formats of the knowledge base, its underlying organization method such as a vector database or relational tables, and the agent's policy for when and how to access memory.
+Consequently, $P$ describes an open program space that can express many storage and retrieval procedures.
+We define $\mathcal{J}(P)$ as the agent's performance on \rev{$\mathcal{D}_\text{v}$} when equipped with a knowledge base instantiated by $P$.
+The objective is to find the optimal memory program $P^*$ that maximizes this performance metric:
+\begin{equation}
+P^* = \arg\max_P \mathcal{J}(P).
+\label{eq:objective}
+\end{equation}
+In the next section, we address how we can automatically discover the optimal memory program for a given task. Specifically, we propose a framework that uses reflective code evolution to search this program space.

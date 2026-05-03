@@ -1,6 +1,6 @@
 """Tests for evolution/sandbox.py — compile, schema, smoke test."""
 
-from programmaticmemory.evolution.sandbox import (
+from mstar.evolution.sandbox import (
     CompiledProgram,
     CompileError,
     compile_kb_program,

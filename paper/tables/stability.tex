@@ -1,0 +1,22 @@
+% Table: Stability Across Seeds
+\begin{wraptable}{r}{0.64\textwidth}
+    \vspace{-1.2em}
+    \centering
+    \scriptsize
+    \caption{\textbf{Stability across evolution seeds.}
+    Mean and std.\ are computed over five independent stability runs with random seeds; metrics match the primary columns in \autoref{tab:main-results}.
+    CV is the coefficient of variation in percent, Best Baseline is the strongest fixed baseline, and Win is the number of seeds above that baseline.}
+    \vspace{-0.5em}
+    \label{tab:stability}
+    \begin{tabularx}{\linewidth}{@{}l >{\centering\arraybackslash}X >{\centering\arraybackslash}p{0.6cm} >{\centering\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{0.6cm}@{}}
+        \toprule
+        \rowcolor{gray!10}
+        \textbf{Benchmark} & \textbf{Mean{\scriptsize$\pm$Std}} & \textbf{CV} & \textbf{Best Baseline} & \textbf{Win} \\
+        \midrule
+        LoCoMo          & $\rev{0.421_{\pm0.042}}$ & \rev{10.0} & 0.373 {\scriptsize(Mem0)}         & 4/5 \\
+        HB Data         & $0.391_{\pm0.023}$ &  5.9 & 0.327 {\scriptsize(GEPA{+}VS)}    & 5/5 \\
+        PR Finance      & $0.561_{\pm0.032}$ &  5.7 & 0.449 {\scriptsize(GEPA)}          & 5/5 \\
+        \bottomrule
+    \end{tabularx}%
+    \vspace{-1em}
+\end{wraptable}

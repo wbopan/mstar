@@ -1,0 +1,1289 @@
+% === Appendix ===
+
+\appendix
+
+\section*{Appendix}
+
+\vspace{0.4em}
+
+\newcommand{\appsection}[3]{%
+  \noindent\colorbox{gray!7}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+    \textbf{\textcolor{cyan!70!black}{#1}\hspace{0.5em}#2}\hfill\pageref{#3}%
+  }}\par\vspace{0.05em}%
+}
+\newcommand{\appsubsection}[2]{%
+  \noindent\hspace{1em}#1\dotfill\pageref{#2}\par%
+}
+
+\begingroup
+\scriptsize
+\begin{center}
+\textbf{\large Table of Contents}
+\end{center}
+
+\vspace{0.25em}
+\hrule
+\vspace{0.35em}
+
+\appsection{A}{Reflective Code Evolution Algorithm}{app:algorithm}
+\appsubsection{A.1\hspace{0.5em}Evolution Loop}{alg:evolution-loop}
+\appsubsection{A.2\hspace{0.5em}Split Evaluation}{alg:split-eval}
+
+\vspace{0.1em}
+\appsection{B}{Benchmarks and Dataset Details}{app:datasets}
+\appsubsection{B.1\hspace{0.5em}Dataset Splits}{app:dataset-splits}
+\appsubsection{B.2\hspace{0.5em}LoCoMo}{app:dataset-locomo}
+\appsubsection{B.3\hspace{0.5em}ALFWorld}{app:dataset-alfworld}
+\appsubsection{B.4\hspace{0.5em}HealthBench}{app:dataset-healthbench}
+\appsubsection{B.5\hspace{0.5em}PRBench}{app:dataset-prbench}
+
+\vspace{0.1em}
+\appsection{C}{Baseline Methods}{app:baselines}
+\appsubsection{C.1\hspace{0.5em}No Memory}{app:baseline-no-memory}
+\appsubsection{C.2\hspace{0.5em}Retrieval-Based Systems}{app:baseline-retrieval}
+\appsubsection{C.3\hspace{0.5em}Self-Evolution Systems}{app:baseline-self-evolution}
+\appsubsection{C.4\hspace{0.5em}Prompt-Optimizing Systems}{app:baseline-prompt}
+
+\vspace{0.1em}
+\appsection{D}{Experiment Configuration}{app:experiment-config}
+\appsubsection{D.1\hspace{0.5em}Computational Cost}{app:cost}
+\appsubsection{D.2\hspace{0.5em}Hyperparameters}{app:hyperparameters}
+\appsubsection{D.3\hspace{0.5em}Representative Subset Selection}{app:representative-subset}
+
+\vspace{0.1em}
+\appsection{E}{Seed Programs}{app:seeds}
+\appsubsection{E.1\hspace{0.5em}Vector Search}{app:seed-vector-search}
+\appsubsection{E.2\hspace{0.5em}LLM Summarizer}{app:seed-llm-summarizer}
+\appsubsection{E.3\hspace{0.5em}Experience Learner}{app:seed-experience-learner}
+
+\vspace{0.1em}
+\appsection{F}{Evolved Programs}{app:evolved-programs}
+\appsubsection{F.1\hspace{0.5em}ALFWorld: Deterministic Action Cache}{app:evolved-alfworld}
+\appsubsection{F.2\hspace{0.5em}LoCoMo: Multi-Signal Episodic Index}{app:evolved-locomo}
+\appsubsection{F.3\hspace{0.5em}HealthBench and PRBench Program Sketches}{app:evolved-health-pr}
+\appsubsection{F.4\hspace{0.5em}Cross-Benchmark Structural Comparison}{app:evolved-comparison}
+
+\vspace{0.1em}
+\appsection{G}{Prompt Templates and Mutation Interface}{app:prompts}
+\appsubsection{G.1\hspace{0.5em}Task Agent Prompts}{app:task-agent-prompts}
+\appsubsection{G.2\hspace{0.5em}Reflector Prompt}{app:reflector-prompt}
+\appsubsection{G.3\hspace{0.5em}Compile-Fix Prompt}{app:compile-fix-prompt}
+
+\vspace{0.1em}
+\appsection{H}{Evaluation Protocols}{app:eval-protocols}
+\appsubsection{H.1\hspace{0.5em}Token F1 (LoCoMo)}{app:metric-token-f1}
+\appsubsection{H.2\hspace{0.5em}Binary Success (ALFWorld)}{app:metric-binary-success}
+\appsubsection{H.3\hspace{0.5em}Rubric-Based Scoring}{app:metric-rubric}
+
+\vspace{0.1em}
+\appsection{I}{Extended Results}{app:extended-results}
+\appsubsection{I.1\hspace{0.5em}Complete Per-Category Results}{app:per-category}
+\appsubsection{I.2\hspace{0.5em}Multi-Seed Stability Results}{app:stability}
+
+\vspace{0.1em}
+\appsection{J}{Limitations}{app:limitations}
+
+\vspace{0.1em}
+\appsection{K}{Broader Impact}{app:broader-impact}
+
+\vspace{0.1em}
+\appsection{L}{LLM Usage}{app:llm-usage}
+
+\vspace{0.3em}
+\hrule
+\endgroup
+
+\section{Reflective Code Evolution Algorithm}
+\label{app:algorithm}
+
+\begin{algorithm}[!htbp]
+\caption{\textbf{Reflective code evolution for memory-program search.}
+The left panel gives the population-based evolution loop, and the right panel gives split evaluation for a candidate program.
+\rev{Revised in this version: (a) adds an explicit guard so discarded mutations skip evaluation and pool insertion; (b) replaces the abbreviated $P.\textsc{Instr}_*$ with the full \textsc{Instruction} constants and the explicit \textsc{KnowledgeBase} constructor, and routes failed/successful samples by an explicit threshold $\theta$.}}
+\label{alg:evolution}
+\begin{minipage}[t]{0.47\linewidth}
+\textbf{(a) Evolution Loop} \label{alg:evolution-loop}
+\begin{algorithmic}[1]
+\REQUIRE Seed programs $\{S_1,\ldots,S_K\}$, budget $B$, temp.\ $\tau$
+\REQUIRE Episodes $D_\text{e}$, static val $D_\text{v}$, rotate pool $D_\text{r}$
+\ENSURE Best program $P^*$
+\STATE $\mathcal{P} \gets \emptyset$
+\FOR{$i = 1$ \TO $K$}
+    \STATE $(J_i, \_) \gets \textsc{Eval}(S_i, D_\text{e}, D_\text{v})$
+    \STATE $\mathcal{P} \gets \mathcal{P} \cup \{(S_i, J_i)\}$
+\ENDFOR
+\FOR{$t = 1$ \TO $B$}
+    \STATE $P_\text{par} \gets \textsc{SoftmaxSample}(\mathcal{P}, \tau)$
+    \STATE $\tilde{D} \gets \textsc{Sample}(D_\text{r},\, n_r)$
+    \STATE $(\_, \mathcal{R}) \gets \textsc{Eval}(P_\text{par}, D_\text{e}, \tilde{D})$
+    \STATE $P_\text{mut} \gets \textsc{Mutate}(P_\text{par}, \mathcal{R})$
+    \STATE $P' \gets \textsc{CompileFix}^{k}(P_\text{mut})$ \COMMENT{$\bot$ if discarded}
+    \IF{$P' \neq \bot$}
+        \STATE $(J', \_) \gets \textsc{Eval}(P', D_\text{e}, D_\text{v})$
+        \STATE $\mathcal{P} \gets \mathcal{P} \cup \{(P', J')\}$
+    \ENDIF
+\ENDFOR
+\RETURN $\arg\max_{(P,J) \in \mathcal{P}} J$
+\end{algorithmic}
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.50\linewidth}
+\textbf{(b) Split Evaluation} \label{alg:split-eval}
+\begin{algorithmic}[1]
+\REQUIRE Program $P$, task agent $\mathcal{A}$, metric $\mu$, threshold $\theta$
+\REQUIRE Episodes $D_\text{e}$, eval queries $D_\text{eval}$
+\ENSURE Score $J$, diagnostic cases $\mathcal{R}=(\mathcal{F},\mathcal{S})$
+\STATE \textit{// Phase 1: Knowledge ingestion}
+\STATE $\text{KB} \gets P.\textsc{KnowledgeBase}(\text{toolkit})$
+\FOR{$d \in D_\text{e}$}
+    \STATE $\text{item} \gets \mathcal{A}.\texttt{extract}(d,\; P.\textsc{InstructionKnowledgeItem})$
+    \STATE $\text{KB}.\texttt{write}(\text{item},\, d)$
+\ENDFOR
+\STATE \textit{// Phase 2: Retrieval and scoring}
+\STATE $\mathcal{F}, \mathcal{S} \gets \emptyset, \emptyset$
+\FOR{$(q, y) \in D_\text{eval}$}
+    \STATE $\text{query} \gets \mathcal{A}.\texttt{formulate}(q,\; P.\textsc{InstructionQuery})$
+    \STATE $c \gets \text{KB}.\texttt{read}(\text{query})$
+    \STATE $\hat{y} \gets \mathcal{A}.\texttt{respond}(q, c,\; P.\textsc{InstructionResponse})$
+    \STATE $s \gets \mu(\hat{y},\, y)$
+    \IF{$s < \theta$}
+        \STATE $\mathcal{F} \gets \mathcal{F} \cup \{(q, y, \hat{y}, c, s)\}$
+    \ELSE
+        \STATE $\mathcal{S} \gets \mathcal{S} \cup \{(q, y, \hat{y}, c, s)\}$
+    \ENDIF
+\ENDFOR
+\RETURN $\bigl(\tfrac{1}{|D_\text{eval}|}\sum s,\;\; (\mathcal{F}, \mathcal{S})\bigr)$
+\end{algorithmic}
+\end{minipage}
+\end{algorithm}
+
+\FloatBarrier
+
+\section{Benchmarks and Dataset Details}
+\label{app:datasets}
+
+\subsection{Dataset Splits}
+\label{app:dataset-splits}
+
+\autoref{tab:datasets} summarizes the data splits for each benchmark configuration.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Dataset split sizes.}
+Rows report train, validation, and test sizes for every benchmark split used by the evaluation pipeline.}
+\label{tab:datasets}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+\textbf{Benchmark} & \textbf{Split} & \textbf{Train} & \textbf{Val} & \textbf{Test} \\
+\midrule
+LoCoMo         & ---               & 272 sessions  & 1{,}440 QA & 100 QA \\
+\midrule
+ALFWorld       & Unseen            & 4{,}652 trajectories & 145 ep.    & 50 ep. \\
+               & Seen              & 4{,}652 trajectories & 150 ep.    & 50 ep. \\
+\midrule
+HealthBench    & Data Tasks        & 257           & 120        & 100 \\
+               & Emergency         & 260           & 122        & 100 \\
+\midrule
+PRBench        & Legal             & 100           & 100        & 50 \\
+               & Finance           & 120           & 130        & 50 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For LoCoMo, we exclude category~5 (adversarial and unanswerable questions), which tests refusal capability rather than memory retrieval, retaining 1{,}540 QA pairs across four categories~\citep{locomo}.
+We reserve 100 QA pairs for the held-out test split and use the remaining 1{,}440 QA pairs as validation data.
+For PRBench, hard items (\texttt{finance\_hard} and \texttt{legal\_hard}) are excluded before train, validation, and held-out test construction to avoid distortion of the fitness signal~\citep{prbench}.
+
+\subsection{LoCoMo}
+\label{app:dataset-locomo}
+
+LoCoMo~\citep{locomo} is a multi-session conversational question answering benchmark in which the agent must recover relevant facts from long dialogue histories.
+The dataset contains extended dialogues with timestamped sessions, and the questions cover single-hop recall, temporal reasoning, causal reasoning, and cross-session multi-hop reasoning.
+We use the provided conversation sessions as episodes and report token-level F1 together with an LLM-judge score.
+
+\subsection{ALFWorld}
+\label{app:dataset-alfworld}
+
+ALFWorld~\citep{alfworld} evaluates embodied task completion in simulated household environments through text interaction.
+The agent must complete goals such as finding, heating, cleaning, and placing objects.
+We use expert trajectories from the training split as episodes and report success rate within a 50-step budget on both seen and unseen environment splits.
+
+\subsection{HealthBench}
+\label{app:dataset-healthbench}
+
+HealthBench~\citep{healthbench} is a medical question answering benchmark with professional rubric-based evaluation.
+Each sample includes a multi-turn clinical dialogue, an ideal completion, and structured pass or fail criteria written by medical professionals.
+We evaluate two categories: health data interpretation and emergency referral recognition.
+Because HealthBench does not provide a training split, we construct episode pools from a held-out portion of the benchmark data and keep evaluation queries disjoint from episode construction.
+We filter by category first, then use 54\% of the category data for episode construction and reserve 100 examples for held-out testing.
+We report rubric score, computed as the fraction of criteria marked positive by an LLM judge.
+
+\subsection{PRBench}
+\label{app:dataset-prbench}
+\looseness=-1
+PRBench~\citep{prbench} evaluates professional reasoning in legal analysis and financial valuation.
+Each sample contains a task prompt, an expert reference, and an importance-weighted rubric.
+Similar to HealthBench, PRBench does not provide a training split, so we construct episodes from a held-out portion and evaluate on disjoint query sets.
+We filter out the hard subsets before splitting, use 40\% of the remaining data for episode construction, and reserve 50 examples for held-out testing.
+For consistency, we apply the same rubric-based scoring protocol used for HealthBench to both PRBench splits in our evaluation.
+
+\FloatBarrier
+
+\section{Baseline Methods}
+\label{app:baselines}
+
+We compare \sysname{} against a no-memory control and eight memory-based baselines spanning retrieval-based systems, self-evolution systems, and prompt-optimizing systems.
+
+\subsection{No Memory}
+\label{app:baseline-no-memory}
+
+The no-memory control answers each task directly without any external memory store or retrieved context during evaluation.
+
+\subsection{Retrieval-Based Systems}
+\label{app:baseline-retrieval}
+
+These methods store raw observations and retrieve relevant context by similarity.
+\textit{Vector Search} stores each observation in a vector collection and retrieves top-$k$ items by embedding cosine similarity, without task-specific parsing~\citep{rag}.
+\textit{G-Memory}~\citep{alma} augments vector retrieval with a hierarchical graph over related tasks implemented with SQLite.
+\textit{Mem0}~\citep{mem0} extracts atomic facts from observations and maintains them with LLM-driven add, update, and delete operations as new observations arrive.
+
+\subsection{Self-Evolution Systems}
+\label{app:baseline-self-evolution}
+
+These methods distill reusable knowledge from experience instead of storing raw episodes directly.
+\textit{Trajectory Retrieval}~\citep{alma} retrieves full episode trajectories by embedding similarity.
+\textit{ReasoningBank}~\citep{ouyang2025reasoningbank} extracts key insights from each episode and retrieves them with similar task descriptions.
+\textit{Dynamic Cheatsheet}~\citep{alma} maintains a single global summary that is iteratively rewritten after each new experience.
+
+\subsection{Prompt-Optimizing Systems}
+\label{app:baseline-prompt}
+
+These methods improve agent behavior by evolving the system prompt.
+\textit{GEPA}~\citep{gepa} optimizes prompts through reflective mutation with Pareto-based candidate selection.
+We evaluate two variants: \textit{GEPA} and \textit{GEPA + Vector Search}.
+The second variant adds a vector database to GEPA because the original GEPA setup does not include a persistent knowledge base, which can limit performance on memory-intensive tasks.
+
+\section{Experiment Configuration}
+\label{app:experiment-config}
+
+\subsection{Computational Cost}
+\label{app:cost}
+
+\autoref{tab:cost} reports the computational cost of running \sysname{} evolution and baselines across all benchmarks.
+We break down API calls by role: the \emph{task agent} (knowledge extraction, query generation, and answer generation), the \emph{reflector} (code mutation via LLM reflection), the \emph{judge} (per-criterion rubric scoring for HealthBench and PRBench), and the \emph{toolkit} \rev{(any LLM call issued from inside the memory pipeline at write or read time, including evolved \texttt{write()}/\texttt{read()} methods, baseline retrieval steps, and embedding-driven preprocessing helpers)}.
+All experiments use \texttt{gpt-5.4-mini} as the task agent, judge, and toolkit model, and \texttt{gpt-5.3-codex} as the reflector model~\citep{openai2026gpt54mini,openai2026gpt53codex}.
+Cost estimates use Azure OpenAI pricing: \$0.75/\$4.50 per 1M input/output tokens for \texttt{gpt-5.4-mini}, and \$1.75/\$14.00 per 1M input/output tokens for \texttt{gpt-5.3-codex}~\citep{openai2026gpt54mini,openai2026gpt53codex}.
+Note that \texttt{gpt-5.3-codex} is a reasoning model; its output token counts include internal reasoning tokens, which are billed at the same rate as visible output tokens when computing the estimates below.
+Token columns report GPT-family LLM tokens.
+BGE-M3 embedding tokens used for vector search and subset selection are tracked separately from the GPT token and dollar estimates.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Computational cost of evolution runs and representative baselines.}
+Rows report iteration count, API calls by role, GPT-family token counts, estimated dollar cost, and wall-clock time.
+Wall-clock time includes environment interaction overhead for ALFWorld runs.}
+\label{tab:cost}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}ll r rrrr rr r r@{}}
+\toprule
+\textbf{Benchmark} & \textbf{Config} & \textbf{Iter.} & \textbf{Task} & \textbf{Reflect.} & \textbf{Judge} & \textbf{Toolkit} & \textbf{Input} & \textbf{Output} & \textbf{Cost} & \textbf{Time} \\
+\midrule
+LoCoMo        & \sysname{} & 20 & 5802 & 48 & --- & 135 & 4.9M & 4.2M & \$25.43 & 5.1h \\
+              & Vector Search     &  0 &  200 &  0 & --- & 272 & 294K &  71K &  \$0.54 &  2m \\
+              & No Memory       &  0 &  200 &  0 & --- & 272 & 219K &  64K &  \$0.45 &  1m \\
+\midrule
+ALFWorld      & \sysname{} & 20 & 3355 & 25 & --- & 443 & 7.5M & 1.4M & \$13.92 & 100h \\
+(Unseen)      & Vector Search     &  0 &   80 &  0 & --- & 497 & 711K &  50K &  \$0.76 & 14m \\
+              & No Memory       &  0 &   80 &  0 & --- & 497 & 708K &  50K &  \$0.76 & 11m \\
+\midrule
+ALFWorld      & \sysname{} & 20 & 2420 & 28 & --- & 494 & 5.6M & 1.1M & \$11.94 & 101h \\
+(Seen)        & Vector Search     &  0 &   80 &  0 & --- & 497 & 692K &  49K &  \$0.74 & 11m \\
+              & No Memory       &  0 &   50 &  0 & --- & 224 & 264K &  25K &  \$0.31 &  0m \\
+\midrule
+HB-Emergency  & \sysname{} & 20 & 4272 & 31 & 21370 & 2219 & 21M & 6.1M & \$47.20 & 4.3h \\
+              & Vector Search     &  0 &   45 &  0 &  1102 &  423 & 830K & 145K &  \$1.28 &  6m \\
+              & No Memory       &  0 &   54 &  0 &  1102 &  412 & 761K & 137K &  \$1.19 &  1m \\
+\midrule
+HB-DataTasks  & \sysname{} & 20 & 4204 & 24 & 15006 & 1575 & 18M & 6.3M & \$44.64 & 2.1h \\
+              & Vector Search     &  0 &   24 &  0 &  1097 &  433 & 950K & 177K &  \$1.51 &  7m \\
+              & No Memory       &  0 &   34 &  0 &  1105 &  423 & 836K & 171K &  \$1.40 &  2m \\
+\midrule
+PR-Legal      & \sysname{} & 20 & 3065 & 28 & 19984 & 1242 & 48M & 11M & \$90.19 & 15h \\
+              & Vector Search     &  0 &   15 &  0 &   958 &  185 & 818K & 130K &  \$1.20 &  6m \\
+              & No Memory       &  0 &   15 &  0 &   950 &  185 & 712K & 117K &  \$1.06 &  1m \\
+\midrule
+PR-Finance    & \sysname{} & 20 & 1795 & 31 & 18602 & 2497 & 47M & 10M & \$84.81 & 2.6h \\
+              & Vector Search     &  0 &    8 &  0 &   845 &  212 & 740K & 153K &  \$1.24 &  6m \\
+              & No Memory       &  0 &   13 &  0 &   895 &  207 & 646K & 139K &  \$1.11 & 11m \\
+\bottomrule
+\end{tabular}
+\vspace{0.3em}
+
+{\footnotesize Call counts include recorded API attempts.
+Token totals sum provider usage fields when available; failed attempts without usage metadata contribute to call counts only.}
+\end{table}
+
+The total evolution cost ranges from \$12--90 per benchmark over 20 iterations, depending primarily on the evaluation protocol.
+Rubric-graded benchmarks (HealthBench and PRBench) are substantially more expensive because each validation item requires multiple LLM judge calls for per-criterion scoring, making the judge the dominant cost component (60--80\% of total calls).
+Token-F1 benchmarks (LoCoMo) and binary-success benchmarks (ALFWorld) avoid judge calls entirely, keeping evolution under \$26.
+ALFWorld's long wall-clock time (100h) is dominated by TextWorld environment interaction; API latency contributes less.
+Although the reflector makes only 24--48 calls per run, it uses the more expensive \texttt{gpt-5.3-codex} model (\$14/1M output tokens vs.\ \$4.50 for \texttt{gpt-5.4-mini}) and produces long code patches, so it accounts for 7--24\% of total cost depending on the benchmark.
+
+Compared to baselines, the evolution overhead is a one-time cost: once the best program is found, inference uses the same number of calls as any baseline.
+The per-query inference cost of an evolved program equals that of the corresponding baseline configuration (No Memory or Vector Search) plus any toolkit calls the evolved program makes, typically 0--2 additional LLM calls per query.
+
+
+% Stability table moved to §4 Results (results.tex)
+
+\FloatBarrier
+
+\subsection{Hyperparameters}
+\label{app:hyperparameters}
+
+\autoref{tab:hyperparams} lists the key hyperparameters used across all experiments.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Hyperparameters for \sysname{} evolution.}
+Rows list shared settings and benchmark-specific ranges used in the main experiments.}
+\label{tab:hyperparams}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Evolution iterations         & 20 \\
+Population seed programs     & 3 \\
+Selection strategy           & Softmax ($\rev{\tau}{=}0.15$) \\
+Static validation subset     & 32--60 items ($k$-means clustering) \\
+Rotating validation subset   & 5 items per iteration \\
+Train-to-validation ratio    & 2 (train episodes = $2 \times$ validation items) \\
+Embedding model (subset selection) & BGE-M3~\citep{bge_m3} \\
+Reflector model              & GPT-5.3-Codex (reasoning: medium) \\
+Task agent / toolkit model   & GPT-5.4-mini \\
+Toolkit LLM call budget      & 1 call per \texttt{read}/\texttt{write} invocation \\
+Compile-fix attempts ($k$)   & 3 \\
+Evaluator thread pool        & 64 workers \\
+LLM retry attempts           & 3 (exponential backoff) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Representative Subset Selection}
+\label{app:representative-subset}
+
+\rev{We construct representative subsets to reduce evaluation cost while preserving coverage of the full validation set.
+For the static validation subset, we embed all validation samples, cluster them into $n$ groups using $k$-means~\citep{macqueen1967kmeans} with a fixed seed, and select the sample closest to each cluster centroid to form the fixed static validation set.
+This procedure covers diverse regions of the validation distribution more effectively than random sampling under the same evaluation budget.
+For the rotating validation subset used as reflection context, we re-cluster the remaining validation pool at each iteration with a different $k$-means seed (the iteration index added to a base seed), and select the sample closest to each new cluster centroid; varying the seed perturbs the cluster boundaries, so the chosen samples differ across iterations even though both clustering and centroid selection are deterministic given a seed.
+The static subset determines fitness, while the rotating subset supplies diverse examples for mutation.}
+
+For episode subset selection, we use a facility-location objective to select $M$ training episodes that are relevant to the validation samples~\citep{nemhauser1978submodular}.
+Given validation samples $V$ and candidate episodes $E$, we select a subset $S \subseteq E$ of size $M$ to maximize:
+\begin{equation}
+    \max_{S \subseteq E, |S|=M} \sum_{v \in V} \max_{e \in S} \operatorname{sim}(v, e),
+\end{equation}
+where $\operatorname{sim}(\cdot, \cdot)$ denotes embedding similarity.
+We use greedy facility-location selection in the same embedding space~\citep{nemhauser1978submodular}.
+
+\FloatBarrier
+
+
+% ============================================================
+%  E. Seed Programs
+% ============================================================
+
+\section{Seed Programs}
+\label{app:seeds}
+
+The program pool is initialized with three structurally diverse seeds designed to cover different points in the memory-program search space.
+All three share identical instruction constants but differ in storage strategy and retrieval logic.
+\autoref{tab:seed-comparison} summarizes their key design choices.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Seed program comparison.}
+Rows summarize each seed program's storage strategy, retrieval strategy, and read-time LLM use.}
+\label{tab:seed-comparison}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Seed} & \textbf{Storage} & \textbf{Retrieval} & \textbf{LLM in \texttt{read}} \\
+\midrule
+Vector Search & ChromaDB chunks & Top-$k$ cosine similarity & No \\
+LLM Summarizer & In-memory list & Concatenate + LLM summarize & Yes (1 call) \\
+Experience Learner & Separate lesson/fact lists & Return all & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Vector Search}
+\label{app:seed-vector-search}
+
+The Vector Search seed (\autoref{lst:seed-vector}) implements vanilla RAG~\citep{rag}: raw text is split into 500-character paragraph-aligned chunks and stored in a ChromaDB collection; \texttt{read()} retrieves the top-5 most similar documents by embedding cosine similarity.
+No LLM call is used at retrieval time.
+
+\subsection{LLM Summarizer}
+\label{app:seed-llm-summarizer}
+
+The LLM Summarizer seed (\autoref{lst:seed-llm}) stores raw text in an in-memory list without any preprocessing.
+At retrieval time, all stored text is concatenated (up to 30{,}000 characters) and passed to the toolkit LLM alongside the query for query-focused summarization.
+This seed tests whether neural synthesis at read time can compensate for the lack of structured indexing.
+
+\subsection{Experience Learner}
+\label{app:seed-experience-learner}
+
+The Experience Learner seed (\autoref{lst:seed-experience}) extracts a general lesson and a specific fact from each observation, storing them in separate lists.
+At retrieval time, it returns all stored lessons and facts (truncated to 500 characters each), ignoring the query entirely.
+This seed explores whether dual-track extraction with full recall outperforms selective retrieval.
+
+\begin{lstlisting}[style=evolvedcode, caption={Seed 1: Vector Search.}, label=lst:seed-vector]
+class KnowledgeBase:
+    """Vanilla RAG: store text chunks in ChromaDB, retrieve by semantic similarity."""
+    def __init__(self, toolkit):
+        self.toolkit = toolkit
+        self.collection = toolkit.chroma.get_or_create_collection("knowledge")
+        self._doc_id = 0
+
+    def write(self, item: KnowledgeItem, raw_text: str) -> None:
+        chunks = self._chunk(raw_text, max_chars=500)
+        for chunk in chunks:
+            self.collection.add(documents=[chunk], ids=[f"doc_{self._doc_id}"])
+            self._doc_id += 1
+
+    def read(self, query: Query) -> str:
+        if self._doc_id == 0:
+            return "No information stored."
+        results = self.collection.query(
+            query_texts=[query.query_text], n_results=min(5, self._doc_id))
+        docs = results["documents"][0] if results["documents"] else []
+        return "\n\n".join(docs)[:3000] if docs else "No relevant information found."
+\end{lstlisting}
+
+\begin{lstlisting}[style=evolvedcode, caption={Seed 2: LLM Summarizer.}, label=lst:seed-llm]
+class KnowledgeBase:
+    """LLM-powered query-focused summarization over stored raw texts."""
+    def __init__(self, toolkit):
+        self.toolkit = toolkit
+        self.raw_texts: list[str] = []
+
+    def write(self, item: KnowledgeItem, raw_text: str) -> None:
+        self.raw_texts.append(raw_text)
+
+    def read(self, query: Query) -> str:
+        if not self.raw_texts:
+            return "No information stored."
+        combined = "\n\n".join(self.raw_texts)[:30000]
+        messages = [{"role": "user", "content":
+            f"Given the following query, summarize ONLY the relevant information "
+            f"from the provided texts. Be concise and factual.\n\n"
+            f"Query: {query.query_text}\n\nTexts:\n{combined}"}]
+        try:
+            result = self.toolkit.llm_completion(messages)
+        except Exception:
+            result = combined
+        return result[:3000]
+\end{lstlisting}
+
+\begin{lstlisting}[style=evolvedcode, caption={Seed 3: Experience Learner.}, label=lst:seed-experience]
+@dataclass
+class KnowledgeItem:
+    lesson_learned: str = field(
+        metadata={"description": "A general lesson or pattern learned from the text"})
+    fact_to_remember: str = field(
+        metadata={"description": "A specific fact worth remembering from the text"})
+
+class KnowledgeBase:
+    """Experience-driven learner that stores lessons and facts, returns all on read."""
+    def __init__(self, toolkit):
+        self.toolkit = toolkit
+        self.lessons: list[str] = []
+        self.facts: list[str] = []
+
+    def write(self, item: KnowledgeItem, raw_text: str) -> None:
+        self.lessons.append(item.lesson_learned)
+        self.facts.append(item.fact_to_remember)
+
+    def read(self, query: Query) -> str:
+        if not self.lessons and not self.facts:
+            return "No information stored."
+        lessons_text = "\n".join(self.lessons)[:500]
+        facts_text = "\n".join(self.facts)[:500]
+        return f"Lessons:\n{lessons_text}\n\nFacts:\n{facts_text}"[:3000]
+\end{lstlisting}
+
+
+\FloatBarrier
+
+% ============================================================
+%  F. Evolved Programs
+% ============================================================
+
+\section{Evolved Programs}
+\label{app:evolved-programs}
+
+We present the best evolved programs for two representative benchmarks, selected to illustrate the structural diversity described in Section~\ref{sec:results}.
+Full source code for all seven benchmark configurations is included in the released experiment artifacts under each run's \texttt{programs/} directory.
+
+\subsection{ALFWorld: Deterministic Action Cache}
+\label{app:evolved-alfworld}
+
+The best ALFWorld program (\autoref{lst:alf-write}, \autoref{lst:alf-read}) constructs a deterministic action cache using SQLite.
+It stores structured fields extracted from expert demonstrations---target object, destination, required state change (clean/cool/heat/examine/toggle), action hints, and failure modes---and retrieves them via a weighted scoring function that combines token overlap with exact-match bonuses for object, location, and state.
+The program includes a \texttt{\_canonical\_state()} normalizer that maps diverse surface forms (``rinse'', ``wash'' $\to$ ``clean''; ``chill'', ``cold'' $\to$ ``cool'') to canonical labels, and a fallback parser that extracts task metadata from raw text when the LLM's structured extraction is sparse.
+A single LLM call at read time synthesizes the top-6 retrieved memories into concise step-by-step guidance for the task agent to follow.
+This description corresponds to the best ALFWorld Unseen program.
+The best ALFWorld Seen program uses the same SQLite-backed design family, but its \texttt{read()} method returns deterministic ranked guidance without a toolkit LLM call.
+
+The key architectural properties are:
+\begin{itemize}
+\item \textbf{SQLite-only storage}, with zero vector retrieval (ChromaDB unused).
+\item \textbf{Canonical state normalization} unifies synonymous state descriptions (6 canonical states).
+\item \textbf{Keyword-based scoring} with exact-match bonuses (+6 for object, +5 for location, +5 for state) and recency tiebreaker for stable ranking.
+\item \textbf{Schema}: 8 structured fields per memory item (task\_summary, task\_type, target\_object, target\_location, required\_state, action\_hint, failure\_mode, keywords).
+\end{itemize}
+
+\begin{lstlisting}[style=evolvedcode, caption={\textcolor{red}{[Revised]} ALFWorld evolved \texttt{write()} --- canonical state extraction and fallback parsing.}, label=lst:alf-write]
+def _canonical_state(self, text):
+    t = (text or "").lower()
+    if any(k in t for k in ["rinse", "wash", "clean"]): return "clean"
+    if any(k in t for k in ["cool", "chill", "cold", "refrigerat"]): return "cool"
+    if any(k in t for k in ["heat", "warm", "hot"]): return "heat"
+    if any(k in t for k in ["examine", "inspect", "look at"]): return "examine"
+    if any(k in t for k in ["toggle", "turn on", "light"]): return "toggle"
+    return ""
+
+def write(self, item, raw_text):
+    task_summary = self._clean(item.task_summary)
+    task_type = self._clean(item.task_type)
+    target_object = self._clean(item.target_object)
+    target_location = self._clean(item.target_location)
+    action_hint = self._clean(item.action_hint)
+    failure_mode = self._clean(item.failure_mode)
+    required_state = self._canonical_state(item.required_state) or \
+        self._canonical_state(f"{task_summary} {task_type} {raw_text}")
+    # Fallback: extract from raw task metadata when LLM fields are sparse
+    if not target_object:
+        m = re.search(r"object_target:\s*([A-Za-z0-9_]+)", raw_text)
+        if m: target_object = m.group(1)
+    kw = set()
+    for part in [task_summary, task_type, target_object, target_location]:
+        kw |= self._tokenize(part)
+    for k in item.keywords: kw |= self._tokenize(k)
+    self.db.execute("INSERT INTO memories (...) VALUES (...)",
+        (task_summary, task_type, target_object, target_location,
+         required_state, action_hint, failure_mode, json.dumps(sorted(kw)),
+         raw_text[:2000]))
+\end{lstlisting}
+
+\begin{lstlisting}[style=evolvedcode, caption={\textcolor{red}{[Revised]} ALFWorld evolved \texttt{read()} --- weighted scoring with exact-match bonuses.}, label=lst:alf-read]
+def read(self, query):
+    rows = self.db.execute("SELECT id, task_summary, task_type, "
+        "target_object, target_location, required_state, action_hint, "
+        "failure_mode, keywords_json FROM memories").fetchall()
+    q_obj = self._clean(query.target_object)
+    q_loc = self._clean(query.target_location)
+    q_state = self._canonical_state(query.required_state)
+    q_tokens = self._tokenize(query.request) | self._tokenize(q_obj) | self._tokenize(q_loc)
+    scored = []
+    for row in rows:
+        (row_id, _, _, target_object, target_location,
+         required_state, _, _, keywords_json) = row
+        mem_kw = set(json.loads(keywords_json or "[]"))
+        score = len(q_tokens & mem_kw)                        (*@\ding{172}@*)
+        if q_obj == (target_object or ""): score += 6         (*@\ding{173}@*)
+        if q_loc == (target_location or ""): score += 5       (*@\ding{174}@*)
+        if q_state == (required_state or ""): score += 5      (*@\ding{175}@*)
+        score += min(row_id, 1000) / 100000.0                 (*@\ding{176}@*)
+        scored.append((score, row))
+    selected = sorted(scored, reverse=True, key=lambda x: x[0])[:6]
+    # One LLM call: synthesize top memories into step-by-step guidance
+    synthesized = self.toolkit.llm_completion([...])           (*@\ding{177}@*)
+    return synthesized[:3000]
+\end{lstlisting}
+\vspace{-0.5em}
+{\scriptsize \ding{172}~Token overlap \quad \ding{173}~Exact object match \quad \ding{174}~Exact location match \quad \ding{175}~State match \quad \ding{176}~Recency tiebreaker \quad \ding{177}~LLM synthesis}
+
+
+\subsection{LoCoMo: Multi-Signal Episodic Index}
+\label{app:evolved-locomo}
+
+The best LoCoMo program builds a hybrid memory combining SQLite and ChromaDB (\autoref{lst:loco-schema}, \autoref{lst:loco-read}).
+Each observation is parsed into 7 structured metadata fields (participants, organizations, activities, key facts, relation facts, named entities) and stored in both a relational table and a vector collection.
+At retrieval time, the program fuses semantic similarity scores from ChromaDB with lexical overlap scores from SQLite, applies person-focused boosting when the query targets a specific individual, limits per-source diversity (at most 2 chunks from any single dialogue), and separately ranks extracted facts by query relevance.
+The final output combines top-ranked candidate facts and relevant text excerpts for answer generation.
+
+The key architectural properties are:
+\begin{itemize}
+\item \textbf{425 source lines}, with the largest hybrid retrieval procedure among the best programs.
+\item \textbf{Dual storage}: SQLite for structured metadata + ChromaDB for semantic search.
+\item \textbf{7 metadata fields} per item including relation facts (subject-verb-object triples).
+\item \textbf{Source diversity cap}: maximum 2 chunks per source document, preventing any single conversation from dominating retrieval for a query.
+\item \textbf{Two-tier output}: candidate facts (direct answer candidates) and relevant excerpts (contextual evidence for grounded answer generation in responses).
+\end{itemize}
+
+\begin{lstlisting}[style=evolvedcode, caption={LoCoMo evolved schema --- 7 structured metadata fields.}, label=lst:loco-schema]
+@dataclass
+class KnowledgeItem:
+    summary: str = field(metadata={"description": "Short summary"})
+    participants: list[str] = field(
+        metadata={"description": "People explicitly discussed in the text"})
+    organizations: list[str] = field(
+        metadata={"description": "Organizations, groups, or institutions"})
+    activities: list[str] = field(
+        metadata={"description": "Activities, hobbies, events mentioned"})
+    key_facts: list[str] = field(
+        metadata={"description": "Atomic factual statements useful for QA"})
+    relation_facts: list[str] = field(
+        metadata={"description": "Subject-verb-object facts"})
+    named_entities: list[str] = field(
+        metadata={"description": "Exact named items: orgs, games, places"})
+\end{lstlisting}
+
+\begin{lstlisting}[style=evolvedcode, caption={\textcolor{red}{[Revised]} LoCoMo evolved \texttt{read()} excerpt --- hybrid scoring and source diversity.}, label=lst:loco-read]
+def read(self, query):
+    # Phase 1: Semantic retrieval from ChromaDB
+    results = self.collection.query(query_texts=[query_text], n_results=24)
+    ids = results["ids"][0]; dists = results["distances"][0]
+    for rank, (doc_id, dist) in enumerate(zip(ids, dists)):
+        semantic_scores[doc_id] = 1.25 / (rank + 1) + 1.0 / (1 + dist)
+
+    # Phase 2: Lexical scoring from SQLite
+    for row in rows:
+        lexical = self._overlap_score(query_tokens, doc_tokens)
+        person_boost = 1.2 if focus_person in participants else 0.0
+        scores[doc_id] += 2.1 * lexical + 1.0 * info_overlap + person_boost
+
+    # Phase 3: Source diversity enforcement
+    source_counts = collections.Counter()
+    for doc_id, _ in ranked_pairs:
+        source_id = row_by_id[doc_id]["source_id"]
+        if source_counts[source_id] >= 2: continue     (*@\ding{172}@*)
+        ranked_ids.append(doc_id)
+        source_counts[source_id] += 1
+
+    # Phase 4: Separate fact ranking
+    for doc_id in ranked_ids:
+        for fact in relation_facts + key_facts:
+            fscore = overlap(query_tokens, fact_tokens)
+            if focus_person in fact: fscore += 0.5      (*@\ding{173}@*)
+            fact_candidates.append((fscore, fact))
+
+    # Output: candidate facts + relevant excerpts
+    return "Candidate facts:\n..." + "\nExcerpts:\n..."  (*@\ding{174}@*)
+\end{lstlisting}
+\vspace{-0.5em}
+{\scriptsize \ding{172}~Max 2 chunks per source \quad \ding{173}~Person-focused boost \quad \ding{174}~Two-tier output format}
+
+
+\subsection{HealthBench and PRBench Program Sketches}
+\label{app:evolved-health-pr}
+
+The HealthBench and PRBench programs evolve toward criterion-aware retrieval rather than broad episodic recall.
+The HealthBench variants use SQLite tables keyed by clinical topic, urgency signals, patient attributes, and rubric-relevant safety notes; the Data Tasks variant also uses ChromaDB for semantic retrieval.
+At read time, they prioritize memories that match the current clinical intent and then use one toolkit LLM call to synthesize concise guidance for the task agent.
+This structure reflects the benchmark's grading protocol: answers must cover medically relevant criteria while avoiding unsafe or unsupported advice.
+
+The PRBench variants emphasize domain-specific decomposition.
+The legal program stores issue statements, governing rules, factual predicates, counterarguments, and citation-like anchors, then retrieves by matching the requested legal theory and factual pattern.
+The finance program stores assumptions, valuation drivers, comparable-company cues, risk factors, and calculation notes, then combines structured scoring with vector retrieval for rubric-targeted evidence.
+These programs illustrate the same pattern as ALFWorld and LoCoMo: each task induces a different schema and retrieval procedure.
+
+\subsection{Cross-Benchmark Structural Comparison}
+\label{app:evolved-comparison}
+
+\autoref{tab:evolved-comparison} summarizes the architectural differences across all four benchmark domains, illustrating how reflective code evolution discovers structurally distinct solutions for each task.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Structural comparison of best evolved programs across benchmark configurations.}
+Rows report program size, storage backends, read-time LLM use, schema size, and test score.}
+\label{tab:evolved-comparison}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Benchmark} & \textbf{Lines} & \textbf{SQLite} & \textbf{ChromaDB} & \textbf{LLM in \texttt{read}} & \textbf{Schema fields} & \textbf{Test} \\
+\midrule
+LoCoMo              & 425  & Yes & Yes & No  & 7  & 0.459 \\
+ALFWorld (Unseen)   & 276  & Yes & No  & Yes & 8  & 0.881 \\
+ALFWorld (Seen)     & 441  & Yes & No  & No  & 8  & 0.700 \\
+HB-Emergency        & 393  & Yes & No  & Yes & 7  & 0.493 \\
+HB-Data             & 769  & Yes & Yes & Yes & 12 & 0.390 \\
+PR-Legal            & 1184 & Yes & Yes & Yes & 22 & 0.660 \\
+PR-Finance          & 509  & Yes & Yes & Yes & 10 & 0.586 \\
+\bottomrule
+\end{tabular}
+\vspace{0.3em}
+
+{\footnotesize Lines count the released best-program source files.}
+\end{table}
+
+\FloatBarrier
+
+
+% ============================================================
+%  G. Prompt Templates
+% ============================================================
+
+\section{Prompt Templates and Mutation Interface}
+\label{app:prompts}
+
+\looseness=-1
+This section documents the key LLM prompts used in \sysname{}.
+We categorize prompts by their role in the system: task agent prompts (used during evaluation) and reflector prompts (used during evolution).
+
+\subsection{Task Agent Prompts}
+\label{app:task-agent-prompts}
+
+The task agent interacts with evolved memory programs through three fixed prompt templates.
+These templates are parameterized by the program's \texttt{INSTRUCTION\_*} constants, meaning evolution can steer the agent's behavior by modifying these constants without changing the prompt structure.
+
+\paragraph{Knowledge item generation.}
+Given raw text and a \texttt{KnowledgeItem} schema, the task agent extracts structured information for a \texttt{write} call:
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+{INSTRUCTION_KNOWLEDGE_ITEM}
+
+Text: {raw_text}
+
+The KnowledgeItem must conform to this schema:
+{schema}
+
+Output ONLY a valid JSON object matching the schema fields. No explanation.
+\end{lstlisting}
+
+\paragraph{Query generation.}
+Given a question and a \texttt{Query} schema, the task agent formulates a retrieval query for a \texttt{read} call:
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+{INSTRUCTION_QUERY}
+
+Question: {question}
+
+The query must be a JSON object matching this schema:
+{schema}
+
+Respond with the JSON only.
+\end{lstlisting}
+
+\paragraph{Answer generation.}
+Given retrieved memory, the task agent generates an answer.
+The \texttt{ALWAYS\_ON\_KNOWLEDGE} constant, if non-empty, is prepended to the retrieved content:
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+<retrieved_memory>
+{ALWAYS_ON_KNOWLEDGE}
+
+{retrieved}
+</retrieved_memory>
+
+{INSTRUCTION_RESPONSE}
+\end{lstlisting}
+
+\subsection{Reflector Prompt}
+\label{app:reflector-prompt}
+
+The reflector receives the current program, its evaluation score, underperforming cases, and optional context (reference programs, lineage history), and outputs a V4A patch to improve the program.
+The complete prompt template is shown below.
+Sections in \texttt{\{braces\}} are populated dynamically at each iteration; optional sections (lineage log, write examples, success cases, reference programs) are included only when available for that iteration.
+
+\paragraph{Interface specification.}
+The following specification is provided to the reflector to define the \texttt{KnowledgeBase} API:
+
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+You are designing a Knowledge Base Program that implements three classes:
+
+1. **KnowledgeItem** (dataclass): Defines what information is captured
+   as knowledge items when writing to the knowledge base.
+   - Must be a @dataclass with typed fields
+   - An external LLM will populate instances by generating JSON matching
+     your field definitions
+   - **Field types MUST be JSON-compatible**: use only str, int, float,
+     bool, list[str], Optional[str]
+   - Do NOT use datetime, tuple, bytes, or custom objects
+   - Use `field(metadata={"description": "..."})` to describe fields
+
+2. **Query** (dataclass): Defines what parameters are used when reading
+   from the knowledge base.
+   - Same constraints as KnowledgeItem
+
+3. **KnowledgeBase** (class): The core knowledge base system.
+   - `__init__(self, toolkit)`: Receives a Toolkit with:
+     - `toolkit.db`: sqlite3.Connection (in-memory SQLite)
+     - `toolkit.chroma`: chromadb ephemeral client
+     - `toolkit.llm_completion(messages, **kwargs) -> str`: LLM for
+       reasoning, summarization, and information extraction
+       (1 call per write/read invocation)
+     - `toolkit.logger.debug(message)`: Debug logging
+   - `write(self, item: KnowledgeItem, raw_text: str) -> None`
+   - `read(self, query: Query) -> str`
+
+Allowed imports: json, re, math, hashlib, collections, dataclasses,
+typing, datetime, textwrap, sqlite3, chromadb
+
+## Runtime Constraints
+- `read()` output limit: at most 3000 characters.
+- `write()` / `read()` timeout: 60 seconds each.
+- `toolkit.llm_completion()` budget: at most 1 LLM call per
+  `write()` or `read()` invocation. The budget resets before each call.
+
+## Instruction Constants (required)
+Four module-level string constants:
+- INSTRUCTION_KNOWLEDGE_ITEM: What to extract and how to structure it.
+- INSTRUCTION_QUERY: How to formulate retrieval queries.
+- INSTRUCTION_RESPONSE: Answer format, length, and style.
+- ALWAYS_ON_KNOWLEDGE: Persistent context injected into every task
+  agent prompt. Can be empty.
+\end{lstlisting}
+
+\paragraph{Patch format specification.}
+The reflector is instructed to output changes in V4A patch format:
+
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+Before the patch, output a commit message summarizing your changes:
+
+*** Commit Message
+Title: <one-line summary of what you changed and why>
+- <root cause / diagnosis>
+- <what you changed>
+
+Then output your changes as a V4A patch.
+
+IMPORTANT: You MUST output the exact markers `*** Begin Patch` and
+`*** End Patch` on their own lines. Do NOT wrap them in code fences.
+
+Format:
+*** Begin Patch
+*** Update File: program.py
+@@ <optional context hint>
+ context line (1-2 lines before change)
+-removed line
++added line
+ context line (1-2 lines after change)
+*** End Patch
+
+Rules:
+- Lines prefixed with `-` are removed, `+` are added,
+  ` ` (space) are unchanged context.
+- Include 1-2 context lines before and after each change.
+- Multiple hunks are allowed within one `*** Update File` block.
+\end{lstlisting}
+
+\paragraph{Main reflection prompt.}
+The following is the complete prompt template sent to the reflector LLM for each mutation step in evolution.
+\rev{Rule 3 in this version corrects the previously printed signature to include the \texttt{raw\_text} parameter that \texttt{write()} actually receives.}
+
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+You are an expert Python programmer specializing in knowledge base
+system design.
+
+Your task: Given a Knowledge Base Program, its evaluation score, and
+underperforming cases, identify the root cause of each low score and
+improve the program. Improvements are two-fold:
+(A) **Prompt Optimization** -- tune the four instruction constants
+    (especially ALWAYS_ON_KNOWLEDGE) to steer the task agent's
+    behavior, and
+(B) **Memory Design** -- improve the KnowledgeItem/Query schemas and
+    KnowledgeBase storage/retrieval logic.
+Both dimensions matter and should be considered together.
+
+<interface_spec>
+{KB_INTERFACE_SPEC}
+</interface_spec>
+
+<rules>
+1. Output your diagnosis first, then your changes as a patch.
+2. The code must define exactly three classes (KnowledgeItem, Query,
+   KnowledgeBase) and four module-level string constants
+   (INSTRUCTION_KNOWLEDGE_ITEM, INSTRUCTION_QUERY,
+   INSTRUCTION_RESPONSE, ALWAYS_ON_KNOWLEDGE).
+3. KnowledgeBase.__init__ must accept `toolkit`; write takes a
+   KnowledgeItem and a raw_text string; read takes a Query and
+   returns str.
+4. `read()` must return at most 3000 characters.
+5. Keep it simple. Make minimal changes that generalize beyond the
+   specific cases shown -- no hardcoded word lists or
+   case-specific pattern rules.
+6. **Prompt Optimization**: Update INSTRUCTION_* to steer the task
+   LLM's output format. Update ALWAYS_ON_KNOWLEDGE with domain
+   strategies, heuristics, and behavioral rules the task agent
+   should always follow -- this constant is injected into EVERY
+   task agent action/decision prompt and is often the
+   highest-leverage change. Study the <model_generation> transcripts
+   in the underperforming cases to identify agent behavioral
+   patterns (e.g., looping, inefficient exploration, wrong object
+   selection) that ALWAYS_ON_KNOWLEDGE can fix.
+7. **Memory Design**: Improve KnowledgeItem/Query field schemas and
+   KnowledgeBase read()/write() logic to store and retrieve more
+   useful information for the task agent.
+8. Add clear comments explaining WHY each part of the code works
+   the way it does -- this helps future iterations understand and
+   preserve your design decisions.
+</rules>
+
+<patch_format>
+{PATCH_FORMAT_SPEC}
+</patch_format>
+
+<current_program iteration="{iteration}">
+```python
+{code}
+```
+</current_program>
+
+<evaluation_score>{score}</evaluation_score>
+
+{lineage_section}
+{train_section}
+{memory_debug_logs}
+{success_section}
+{reference_section}
+
+The following cases show poor performance on the validation set after
+memory has been written. Each case contains the full
+retrieval-and-answer conversation trajectory.
+
+<underperforming_cases>
+<case id="1">
+<question>{question}</question>
+<rationale>{expected_answer}</rationale>
+<model_generation>{model_output}</model_generation>
+<score>{case_score}</score>
+<conversation>
+  [user]: {query_generation_prompt}
+  [assistant]: {query_json}
+  [user]: <retrieved_memory>...</retrieved_memory> {instruction}
+  [assistant]: {answer}
+</conversation>
+</case>
+...
+</underperforming_cases>
+
+<task>
+1. Diagnose why these cases scored low -- examine both the retrieval
+   conversation AND the <model_generation> transcript for agent
+   behavioral issues.
+2. Propose improvements along two dimensions:
+   (A) **Prompt Optimization**: How should INSTRUCTION_* and
+       ALWAYS_ON_KNOWLEDGE change to steer the task agent better?
+   (B) **Memory Design**: How should the schemas or
+       storage/retrieval logic change to provide more useful
+       information?
+3. Output your changes as a patch.
+</task>
+\end{lstlisting}
+
+\paragraph{Optional sections.}
+The following sections are conditionally included when their data is available:
+
+\begin{itemize}
+\item \textbf{Lineage log}: Evolution history of the current program's lineage (ancestors, children, regression markers), formatted as commit-style entries with delta scores.
+Regression markers (\texttt{$\leftarrow$ REGRESSION}) flag changes that hurt performance, instructing the reflector not to repeat them.
+
+\item \textbf{Write examples}: Sample knowledge ingestion trajectories showing how the external LLM generates knowledge items from raw document text and how \texttt{write()} is called.
+
+\item \textbf{Success cases}: Cases where the current program performed well, instructing the reflector to preserve the behavior that makes these work.
+
+\item \textbf{Reference programs}: Higher- or lower-scoring programs from the population, with instructions to study which design patterns (e.g., use of \texttt{llm\_completion}, ChromaDB vs.\ SQLite, schema granularity) correlate with scores within the pool.
+
+\item \textbf{Memory debug logs}: Outputs of \texttt{toolkit.logger.debug()} calls within \texttt{write()} and \texttt{read()}, providing visibility into program execution.
+\end{itemize}
+
+\paragraph{Underperforming case selection.}
+At each iteration, 2 failed cases are sampled from the rotating validation set using the Efraimidis--Spirakis weighted sampling algorithm with weight $w_i = 1 - \text{score}_i$, biasing selection toward lower-scoring cases while maintaining diversity~\citep{efraimidis2006weighted}.
+
+\subsection{Compile-Fix Prompt}
+\label{app:compile-fix-prompt}
+
+When a mutated program fails to compile or violates runtime constraints, a compile-fix prompt is sent to the reflector with the failing program and error details:
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+You are an expert Python programmer. A Knowledge Base Program failed
+to compile or run. Fix the error and output your fix as a patch.
+
+{KB_INTERFACE_SPEC}
+
+## Failing Code
+```python
+{code}
+```
+
+## Error
+**{error_type}**: {error_details}
+
+Fix the error and output your fix as a patch.
+\end{lstlisting}
+Up to $k$ compile-fix iterations are attempted before the mutation is discarded.
+
+
+\FloatBarrier
+
+% ============================================================
+%  H. Evaluation Protocols
+% ============================================================
+
+\section{Evaluation Protocols}
+\label{app:eval-protocols}
+
+Each benchmark uses a task-specific evaluation metric.
+All metrics return a score in $[0, 1]$; the fitness function $J(P)$ averages these scores across the evaluation set.
+
+\subsection{Token F1 (LoCoMo)}
+\label{app:metric-token-f1}
+
+Following \citet{squad}, we compute token-level F1 between the model output and the expected answer.
+Both strings are lowercased, articles (``a'', ``an'', ``the'') are removed, and all punctuation is stripped.
+Precision and recall are computed over the resulting token multisets using the standard formula below:
+\begin{equation}
+F_1 = \frac{2 \cdot |\text{out} \cap \text{exp}|}{|\text{out}| + |\text{exp}|}.
+\end{equation}
+If both token sets are empty, the score is 1.0; if exactly one is empty, the score is 0.0.
+
+\rev{\paragraph{LLM-Judge Score (LoCoMo).}
+The L-J column in Table~\ref{tab:main-results} reports a complementary LLM-as-judge metric that allows for paraphrastic answers that token F1 would penalize.
+A separate judge call grades each prediction against the gold answer and returns a binary correctness label, which we then average over the test set.
+The judge uses the same task agent model (GPT-5.4-mini) and the prompt template below; the score is $1.0$ if the response parses as the integer $1$ and $0.0$ otherwise.}
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+You are a strict judge. Determine if the output answers the question
+correctly based on the expected answer. Reply ONLY with 1 (correct)
+or 0 (incorrect).
+
+Expected answer: <<expected>>
+Actual output:   <<output>>
+
+Score (0 or 1):
+\end{lstlisting}
+
+\subsection{Binary Success (ALFWorld)}
+\label{app:metric-binary-success}
+
+The agent interacts with the TextWorld environment for up to 50 steps~\citep{textworld,alfworld}.
+A score of 1.0 is assigned if the task is completed within the step budget; 0.0 otherwise.
+
+\subsection{Rubric-Based Scoring (HealthBench, PRBench)}
+\label{app:metric-rubric}
+
+Each evaluation item includes a structured rubric with multiple criteria, each assigned a point value (positive for desirable traits, negative for undesirable ones).
+An LLM judge independently grades each criterion by examining the conversation and the last assistant response, returning a JSON object with an \texttt{explanation} and a boolean \texttt{criteria\_met} field.
+For negative criteria (e.g., ``Is overly verbose''), a good response should be graded as \texttt{false} (the undesirable trait is not present).
+The score is computed as:
+\begin{equation}
+\text{score} = \text{clip}\!\left(\frac{\sum_{i:\, \text{met}_i} p_i}{\sum_{i:\, p_i > 0} p_i},\; 0,\; 1\right),
+\end{equation}
+where $p_i$ is the point value for criterion $i$ and $\text{met}_i$ indicates whether the criterion was judged as met.
+Negative criteria that are met subtract from the numerator.
+This protocol follows the official HealthBench and PRBench evaluation methodology~\citep{healthbench,prbench}.
+The LLM judge uses the following prompt template for each criterion during grading:
+
+\begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
+Your job is to look at a conversation and a rubric item, and score
+the last turn (the last assistant response) on how well it follows
+the rubric item.
+
+# Conversation
+<<conversation>>
+
+# Rubric item
+<<rubric_item>>
+
+# Instructions
+Return a json object with fields: "explanation" and "criteria_met".
+- "explanation": why the response does or does not meet the criteria.
+- "criteria_met": boolean. If a rubric item has multiple criteria,
+  all must be met to return true.
+- Exception: if criteria says "such as" or "for example", the
+  response need not include all listed examples.
+- For negative criteria (undesirable traits), return whether the
+  criteria IS met (true = bad behavior present), not whether the
+  response is good.
+\end{lstlisting}
+
+
+% ============================================================
+%  I. Per-Category Results
+% ============================================================
+
+\section{Extended Results}
+\label{app:extended-results}
+
+\subsection{Complete Per-Category Results}
+\label{app:per-category}
+
+Table~\ref{tab:per-category} in the main paper reports per-category results for ALFWorld Unseen and LoCoMo with selected baselines.
+Here we provide the complete per-category breakdown for all benchmarks and all baselines in the appendix tables below.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Complete per-category results for ALFWorld Unseen.}
+Columns report success rate by task type.
+Best per column appears in \textbf{bold} for each reported task category.}
+\label{tab:per-cat-alf-unseen}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l cccccc c@{}}
+\toprule
+& \textbf{Simple} & \textbf{Movable} & \textbf{Clean} & \textbf{Light} & \textbf{Cool} & \textbf{Heat} & \textbf{2-Obj} \\
+& \footnotesize$(n{=}8)$ & \footnotesize$(n{=}1)$ & \footnotesize$(n{=}11)$ & \footnotesize$(n{=}1)$ & \footnotesize$(n{=}7)$ & \footnotesize$(n{=}6)$ & \footnotesize$(n{=}8)$ \\
+\midrule
+No Memory            & 0.88 & \textbf{1.00} & 0.82 & 0.00 & 0.57 & 0.83 & 0.62 \\
+Vector Search        & 0.62 & \textbf{1.00} & 0.64 & 0.00 & 0.71 & 0.67 & 0.62 \\
+G-Memory             & \textbf{1.00} & \textbf{1.00} & 0.55 & \textbf{1.00} & 0.29 & 0.83 & 0.75 \\
+Mem0                 & 0.88 & \textbf{1.00} & 0.64 & 0.00 & 0.57 & \textbf{1.00} & 0.75 \\
+Trajectory Retrieval & 0.75 & \textbf{1.00} & 0.73 & 0.00 & 0.71 & 0.67 & 0.75 \\
+ReasoningBank        & \textbf{1.00} & \textbf{1.00} & 0.55 & \textbf{1.00} & 0.57 & 0.83 & 0.75 \\
+Dynamic Cheatsheet   & \textbf{1.00} & \textbf{1.00} & 0.36 & \textbf{1.00} & 0.00 & \textbf{1.00} & 0.75 \\
+GEPA                 & 0.88 & \textbf{1.00} & \textbf{1.00} & 0.00 & \textbf{0.86} & \textbf{1.00} & 0.62 \\
+GEPA + Vector Search & 0.88 & \textbf{1.00} & \textbf{1.00} & 0.00 & 0.57 & \textbf{1.00} & 0.62 \\
+\rowcolor{green!10}
+\sysname{}           & 0.88 & \textbf{1.00} & 0.91 & \textbf{1.00} & \textbf{1.00} & 0.83 & 0.75 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Complete per-category results for ALFWorld Seen.}
+Columns report success rate by task type.
+Best per column appears in \textbf{bold} for each reported task category.}
+\label{tab:per-cat-alf-seen}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l cccccc c@{}}
+\toprule
+& \textbf{Simple} & \textbf{Clean} & \textbf{Light} & \textbf{Cool} & \textbf{Heat} & \textbf{2-Obj} & \textbf{Overall} \\
+& \footnotesize$(n{=}2)$ & \footnotesize$(n{=}12)$ & \footnotesize$(n{=}2)$ & \footnotesize$(n{=}8)$ & \footnotesize$(n{=}7)$ & \footnotesize$(n{=}15)$ & \footnotesize$(n{=}50)$ \\
+\midrule
+No Memory            & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.50 & 0.43 & 0.87 & \rev{0.640} \\
+Vector Search        & \textbf{1.00} & 0.42 & \textbf{1.00} & \textbf{1.00} & 0.29 & 0.87 & \rev{0.720} \\
+G-Memory             & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.12 & 0.29 & 0.87 & \rev{0.560} \\
+Mem0                 & \textbf{1.00} & 0.25 & \textbf{1.00} & 0.62 & 0.43 & 0.87 & \rev{0.640} \\
+Trajectory Retrieval & \textbf{1.00} & 0.58 & \textbf{1.00} & 0.88 & 0.43 & \textbf{0.93} & \rev{0.780} \\
+ReasoningBank        & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.25 & 0.43 & 0.80 & \rev{0.580} \\
+Dynamic Cheatsheet   & \textbf{1.00} & 0.17 & \textbf{1.00} & 0.38 & 0.00 & 0.73 & \rev{0.480} \\
+GEPA                 & \textbf{1.00} & 0.50 & \textbf{1.00} & 0.88 & 0.43 & 0.80 & \rev{0.720} \\
+GEPA + Vector Search & \textbf{1.00} & \textbf{0.92} & \textbf{1.00} & \textbf{1.00} & 0.29 & 0.80 & \rev{\textbf{0.820}} \\
+\rowcolor{green!10}
+\sysname{}           & \textbf{1.00} & 0.42 & \textbf{1.00} & 0.75 & \textbf{0.57} & 0.80 & 0.700 \\
+\bottomrule
+\end{tabular}
+\vspace{0.3em}
+
+{\footnotesize \textbf{Bold} marks the best per category; GEPA+VS has the highest overall score (0.820).}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Complete per-category results for LoCoMo.}
+Columns report token F1 by question category: single-hop recall, temporal reasoning, causal reasoning, and open-domain.
+Best per column appears in \textbf{bold} for each reported question category.}
+\label{tab:per-cat-locomo}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}l cccc c@{}}
+\toprule
+& \textbf{Single-hop} & \textbf{Temporal} & \textbf{Causal} & \textbf{Open-domain} & \textbf{Overall} \\
+& \footnotesize$(n{=}18)$ & \footnotesize$(n{=}18)$ & \footnotesize$(n{=}9)$ & \footnotesize$(n{=}55)$ & \\
+\midrule
+No Memory            & 0.02 & 0.00 & 0.11 & 0.04 & \rev{0.036} \\
+Vector Search        & 0.19 & 0.29 & 0.38 & 0.25 & \rev{0.256} \\
+G-Memory             & 0.23 & 0.12 & 0.31 & 0.24 & \rev{0.224} \\
+Mem0                 & \textbf{0.33} & 0.26 & 0.37 & 0.43 & \rev{0.373} \\
+Trajectory Retrieval & 0.18 & \textbf{0.33} & 0.34 & 0.28 & \rev{0.276} \\
+ReasoningBank        & 0.25 & 0.07 & 0.34 & 0.19 & \rev{0.194} \\
+Dynamic Cheatsheet   & 0.14 & 0.00 & 0.22 & 0.14 & \rev{0.124} \\
+GEPA                 & 0.09 & 0.06 & 0.24 & 0.15 & \rev{0.132} \\
+GEPA + Vector Search & 0.16 & \textbf{0.38} & \textbf{0.39} & 0.31 & \rev{0.300} \\
+\rowcolor{green!10}
+\sysname{}           & \textbf{0.33} & 0.19 & 0.35 & \textbf{0.51} & \textbf{0.459} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+HealthBench and PRBench each evaluate on single-category splits (emergency referrals, health data interpretation, legal reasoning, and financial reasoning).
+Their per-category scores equal the overall scores reported in Table~\ref{tab:main-results}; we omit separate per-category tables for these benchmarks.
+
+
+% ============================================================
+%  J. Stability Analysis
+% ============================================================
+
+\subsection{Multi-Seed Stability Results}
+\label{app:stability}
+
+Table~\ref{tab:stability} in the main paper reports summary statistics (mean, standard deviation, coefficient of variation) across five evolution seeds.
+Here we provide the full per-seed results.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Per-seed test scores across stability experiments.}
+Best Baseline denotes the strongest fixed baseline.}
+\label{tab:stability-full}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l ccccc ccc c@{}}
+\toprule
+& \multicolumn{5}{c}{\textbf{Test Score by Seed}} & & & & \\
+\cmidrule(r){2-6}
+\textbf{Benchmark} & \textbf{0} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{Mean} & \textbf{$\pm$Std} & \textbf{CV} & \textbf{Best Baseline} \\
+\midrule
+LoCoMo     & \rev{0.459} & 0.463 & 0.364 & 0.394 & 0.423 & \rev{0.421} & \rev{0.042} & \rev{10.0\%} & 0.373 \\
+HB-Data    & 0.390 & 0.382 & 0.357 & 0.411 & 0.413 & 0.391 & 0.023 & 5.9\% & 0.327 \\
+PR-Finance & 0.586 & 0.544 & 0.582 & 0.582 & 0.513 & 0.561 & 0.032 & 5.7\% & 0.449 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On LoCoMo, 4 out of 5 seeds exceed the strongest baseline (Mem0, 0.373).
+The single exception (seed 2, 0.364) falls within 2.4\% of the baseline, consistent with the higher variance inherent to LoCoMo's multi-category evaluation.
+On HealthBench Data and PRBench Finance, all 5 seeds exceed the respective strongest baselines (GEPA+VS at 0.327; GEPA at 0.449) by substantial margins, demonstrating consistent improvement regardless of initialization.
+
+\autoref{tab:stability-val} reports the best validation score achieved during evolution for each seed, which determines the program selected for final test evaluation.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Best validation score during evolution by seed.}
+Scores are computed on the static validation subset used to select the program for test evaluation.}
+\label{tab:stability-val}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l ccccc cc@{}}
+\toprule
+& \multicolumn{5}{c}{\textbf{Best Validation Score}} & & \\
+\cmidrule(r){2-6}
+\textbf{Benchmark} & \textbf{0} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{Mean} & \textbf{$\pm$Std} \\
+\midrule
+LoCoMo     & 0.333 & 0.273 & 0.289 & 0.312 & 0.333 & 0.308 & 0.027 \\
+HB-Data    & 0.424 & 0.381 & 0.378 & 0.397 & 0.380 & 0.392 & 0.020 \\
+PR-Finance & 0.521 & 0.522 & 0.559 & 0.554 & 0.515 & 0.534 & 0.020 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% ============================================================
+%  J. Limitations
+% ============================================================
+
+\rev{\section{Limitations}
+\label{app:limitations}
+
+\sysname{} has three main limitations.
+First, evaluating each candidate memory program requires re-ingesting episodes and re-scoring on the validation set, so the per-iteration cost grows with episode length and rubric complexity (Appendix~\ref{app:cost}); rubric-graded benchmarks reach \$90 and ALFWorld reaches 100 wall-clock hours per 20-iteration run.
+Second, our experiments use a fixed task agent and reflector model pair (GPT-5.4-mini and GPT-5.3-Codex); we have not measured how strongly the discovered programs depend on this choice.
+Third, evolution can drift toward task-specific heuristics encoded directly in the program logic (e.g., the synonym table in the ALFWorld action cache, Appendix~\ref{app:evolved-alfworld}), which improves in-task performance but limits transfer to other tasks (Figure~\ref{fig:task-optimized-memory}); designing search procedures that prefer reusable structure remains open.}
+
+\section{Broader Impact}
+\label{app:broader-impact}
+
+This work studies agent memory as a research object in controlled benchmark settings.
+Its main positive impact is to make memory programs more reproducible and inspectable: the discovered program is executable code that can be read, tested, and released with the artifacts.
+This can help researchers compare memory programs beyond fixed retrieval pipelines.
+The main risk is that better memory can also make agents more persistent in carrying forward wrong, private, or biased information when the data or objective contains it.
+For uses outside controlled benchmarks, we believe deployment should include data minimization, task-specific evaluation, logging, and human review, especially in high-stakes domains such as health and law.
+
+\section{LLM Usage}
+\label{app:llm-usage}
+
+The authors used large language model agents as research assistants during the preparation of this work.
+Their assistance covered early literature exploration, identification of related papers, implementation support, experiment execution and debugging, and language polishing during writing.
+The authors made the scientific decisions, developed the ideas and claims, designed the method and experiments, and determined the paper structure and final content.

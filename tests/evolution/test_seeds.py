@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from programmaticmemory.evolution.evaluator import MemoryEvaluator
-from programmaticmemory.evolution.sandbox import CompiledProgram, compile_kb_program, smoke_test
-from programmaticmemory.evolution.toolkit import ToolkitConfig
-from programmaticmemory.evolution.types import DataItem, KBProgram
+from mstar.evolution.evaluator import MemoryEvaluator
+from mstar.evolution.sandbox import CompiledProgram, compile_kb_program, smoke_test
+from mstar.evolution.toolkit import ToolkitConfig
+from mstar.evolution.types import DataItem, KBProgram
 
-SEEDS_DIR = Path(__file__).resolve().parents[2] / "src" / "programmaticmemory" / "seeds"
+SEEDS_DIR = Path(__file__).resolve().parents[2] / "src" / "mstar" / "seeds"
 MODEL = "openrouter/deepseek/deepseek-v3.2"
 
 SEED_FILES = sorted(SEEDS_DIR.glob("*.py"))

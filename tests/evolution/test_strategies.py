@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import numpy as np
 from unittest.mock import patch
 
-from programmaticmemory.evolution.strategies import SplitValidation
-from programmaticmemory.evolution.types import (
+import numpy as np
+
+from mstar.evolution.strategies import SplitValidation
+from mstar.evolution.types import (
     DataItem,
     Dataset,
     EvalResult,
@@ -47,8 +48,8 @@ class TestSplitValidation:
         """select() returns only static val items, not rotate items."""
         ds = self._make_large_dataset(n_val=30)
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             mock_sel.return_value = (list(range(10)), [0, 1, 2, 3, 4])  # 5 static val
             mock_emb.return_value = np.random.randn(25, 8)  # 30 - 5 = 25 rotate pool
@@ -62,8 +63,8 @@ class TestSplitValidation:
         """Static val is fixed across iterations."""
         ds = self._make_large_dataset(n_val=30)
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             mock_sel.return_value = (list(range(10)), [0, 1, 2])
             mock_emb.return_value = np.random.randn(27, 8)
@@ -78,8 +79,8 @@ class TestSplitValidation:
         ds = self._make_large_dataset(n_val=30)
         static_indices = [0, 1, 2, 3, 4]
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             mock_sel.return_value = (list(range(10)), static_indices)
             mock_emb.return_value = np.random.randn(25, 8)
@@ -96,8 +97,8 @@ class TestSplitValidation:
         """Different iterations should (usually) get different rotate samples."""
         ds = self._make_large_dataset(n_val=30)
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             mock_sel.return_value = (list(range(10)), [0, 1, 2])
             mock_emb.return_value = np.random.randn(27, 8)
@@ -113,8 +114,8 @@ class TestSplitValidation:
         """Static and rotate pools are disjoint."""
         ds = self._make_large_dataset(n_val=20)
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             static_indices = [0, 3, 7, 10, 15]
             mock_sel.return_value = (list(range(10)), static_indices)
@@ -130,8 +131,8 @@ class TestSplitValidation:
     def test_final_candidates_returns_best(self):
         ds = self._make_large_dataset()
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             mock_sel.return_value = ([0], [0])
             mock_emb.return_value = np.random.randn(29, 8)
@@ -148,8 +149,8 @@ class TestSplitValidation:
         ds = self._make_large_dataset()
         ds.test = [DataItem(raw_text="", question="tq?", expected_answer="ta")]
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             mock_sel.return_value = ([0], [0])
             mock_emb.return_value = np.random.randn(29, 8)
@@ -162,8 +163,8 @@ class TestSplitValidation:
     def test_final_eval_data_returns_none_when_no_test(self):
         ds = self._make_large_dataset()
         with (
-            patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-            patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+            patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+            patch("mstar.evolution.strategies._embed_texts") as mock_emb,
         ):
             mock_sel.return_value = ([0], [0])
             mock_emb.return_value = np.random.randn(29, 8)
@@ -178,20 +179,16 @@ def test_evolution_seed_affects_rotation_sampling(mock_chromadb):
     dataset = Dataset(train=items[:20], val=items[20:], test=[])
 
     with (
-        patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-        patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+        patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+        patch("mstar.evolution.strategies._embed_texts") as mock_emb,
     ):
         # 20 val items, 5 static → 15 rotate pool
         mock_sel.return_value = (list(range(20)), list(range(5)))
         mock_emb.return_value = np.random.randn(15, 8)
-        strat_seed1 = SplitValidation(
-            dataset, static_size=5, rotate_size=3, embedding_model="local", evolution_seed=1
-        )
+        strat_seed1 = SplitValidation(dataset, static_size=5, rotate_size=3, embedding_model="local", evolution_seed=1)
         mock_sel.return_value = (list(range(20)), list(range(5)))
         mock_emb.return_value = np.random.randn(15, 8)
-        strat_seed2 = SplitValidation(
-            dataset, static_size=5, rotate_size=3, embedding_model="local", evolution_seed=2
-        )
+        strat_seed2 = SplitValidation(dataset, static_size=5, rotate_size=3, embedding_model="local", evolution_seed=2)
 
     # They should differ for at least one iteration in 0..4
     any_differ = False
@@ -210,20 +207,18 @@ def test_evolution_seed_persisted_in_state(mock_chromadb):
     dataset = Dataset(train=items[:20], val=items[20:], test=[])
 
     with (
-        patch("programmaticmemory.evolution.strategies.select_representative_subset") as mock_sel,
-        patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+        patch("mstar.evolution.strategies.select_representative_subset") as mock_sel,
+        patch("mstar.evolution.strategies._embed_texts") as mock_emb,
     ):
         mock_sel.return_value = (list(range(20)), list(range(5)))
         mock_emb.return_value = np.random.randn(15, 8)
-        strat = SplitValidation(
-            dataset, static_size=5, rotate_size=3, embedding_model="local", evolution_seed=99
-        )
+        strat = SplitValidation(dataset, static_size=5, rotate_size=3, embedding_model="local", evolution_seed=99)
 
     state = strat.get_state()
     assert state["evolution_seed"] == 99
 
     with (
-        patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+        patch("mstar.evolution.strategies._embed_texts") as mock_emb,
     ):
         mock_emb.return_value = np.random.randn(15, 8)
         restored = SplitValidation.from_state(state, dataset)
@@ -231,7 +226,7 @@ def test_evolution_seed_persisted_in_state(mock_chromadb):
 
     # Override via from_state kwarg
     with (
-        patch("programmaticmemory.evolution.strategies._embed_texts") as mock_emb,
+        patch("mstar.evolution.strategies._embed_texts") as mock_emb,
     ):
         mock_emb.return_value = np.random.randn(15, 8)
         restored2 = SplitValidation.from_state(state, dataset, evolution_seed=7)

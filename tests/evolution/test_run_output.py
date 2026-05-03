@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import litellm
 
-from programmaticmemory.logging.run_output import LLMCallLogger, RunOutputManager
+from mstar.logging.run_output import LLMCallLogger, RunOutputManager
 
 
 class TestRunOutputManager:
@@ -554,7 +554,7 @@ class TestLoggerTee:
     """Tests for RichLogger log_file tee functionality."""
 
     def test_logger_writes_to_file(self, tmp_path):
-        from programmaticmemory.logging.logger import RichLogger
+        from mstar.logging.logger import RichLogger
 
         log_file = tmp_path / "test.log"
         logger = RichLogger(log_file=log_file)
@@ -566,13 +566,13 @@ class TestLoggerTee:
         assert "second line" in content
 
     def test_logger_without_file_works(self):
-        from programmaticmemory.logging.logger import RichLogger
+        from mstar.logging.logger import RichLogger
 
         logger = RichLogger()
         logger.log("no crash")  # Should not raise
 
     def test_indent_preserves_file_handle(self, tmp_path):
-        from programmaticmemory.logging.logger import RichLogger
+        from mstar.logging.logger import RichLogger
 
         log_file = tmp_path / "test.log"
         logger = RichLogger(log_file=log_file)

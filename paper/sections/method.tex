@@ -1,0 +1,94 @@
+% §3 Mstar
+% Reference: Knowledge/Wiki/Method Section Framework.md
+
+\section{Method}
+\label{sec:mstar}
+
+% Fig: System overview moved to Introduction for earlier visibility
+
+Figure~\ref{fig:method-overview} gives an overview of the system \sysname{}, a reflective code evolution method that automatically discovers task-optimized memory programs.
+Specifically, \sysname{} consists of three main components: (1) representing the memory-program search space in code (Section~\ref{sec:search-space}), (2) reflective code evolution (Section~\ref{sec:reflection}), and (3) population-based program search (Section~\ref{sec:population}).
+
+\subsection{Representing the Memory-Program Search Space in Code}
+\label{sec:search-space}
+
+We represent each memory program as an executable Python module with a fixed interface.
+% In contrast, recent works on evolutionary memory typically restrict optimization to predefined memory methods~\citep{cai2025flex, memevolve} or to textual optimization at the prompt level~\citep{memskill, gepa}.
+To define a broad memory-program search space, each memory program simultaneously controls three key components of the knowledge base: \textit{Schema}, \textit{Logic}, and \textit{Instruction}.
+In addition, the program has access to a standardized \textit{Toolkit}.
+
+\begin{itemize}
+    \item \textbf{Schema.}\looseness=-1
+    The Schema specifies the data formats that the knowledge base accepts for writing and querying.
+    For example, the input format can range from structured data with timestamps to natural language insights.
+    We implement the Schema using Python dataclasses.
+    As a result, when the agent needs to write or query information, it instantiates these dataclass types and passes them into the memory program for parsing.
+
+    \item \textbf{Logic.}
+    The Logic defines the backend operations of the knowledge base when processing and storing Schema-formatted inputs and queries.
+    This component can include operations such as computing embeddings, managing SQL tables, or calling an LLM for secondary data processing.
+    Specifically, the Logic exposes \texttt{write} and \texttt{read} functions, which are executed whenever the agent performs write or read actions.
+
+    \item \textbf{Instruction.}
+    The Instruction defines how the agent interacts with the knowledge base.
+    This includes how to extract information from observed episodes, how to formulate queries, and how to interpret the results returned by the knowledge base.
+    We define the Instruction through constant prompt strings.
+    These instruction constants are inserted into the system prompt when the agent executes corresponding write, query, and response actions.
+
+    \item \textbf{Toolkit.}
+    Within the memory-program search space, we allow the memory program to use various data structures and external tools.
+    We provide a set of whitelisted components, including lists, heaps, relational databases, vector databases, and LLM endpoints.
+    The Toolkit enables memory programs to implement complex storage and retrieval procedures.
+\end{itemize}
+
+\subsection{Reflective Code Evolution}
+\label{sec:reflection}
+
+Representing a memory program using executable code places memory-program search in an enormous search space.
+Inspired by recent evolutionary algorithm discovery methods, we design a reflective code evolution process that iteratively refines memory programs using validation feedback~\citep{romera2024funsearch,chen2023evoprompting,deepmind2025alphaevolve}.
+Specifically, this process consists of three stages: sampling feedback from a validation loop, iterative refinement via a coding agent, and constraint checking with automated repair before the candidate is scored.
+
+\textbf{Sampling feedback from the validation loop.}
+We use a set of episodes and validation queries to evaluate a memory program.
+The validation queries are partitioned into a \textit{static} set, which remains constant across all iterations, and a \textit{rotating} set, which changes in each iteration similar to mini-batches in training.
+During validation, the agent initiates a query to the knowledge base for each sample in both the rotating and static sets and \rev{uses} the returned information to generate a response or take an action.
+The aggregated score on the static validation set serves as the performance metric for the current memory program.
+Meanwhile, the generated trajectories on \rev{the} rotating set are used as feedback to improve the program later.
+% We partition the validation data into static and dynamic sets because the rotating validation set provides targeted feedback without leaking information from the static set, preventing evaluation contamination.
+% Simultaneously, using an identical static validation set ensures that the scores remain comparable across different memory programs.
+
+\textbf{Coding agent iteration.}
+We employ a coding agent to iteratively update the current memory program to improve performance and fix potential bugs.
+We provide the coding agent the execution trajectories from the read and write processes, underperforming samples from the rotating validation set, and the change logs from prior iterations along with their corresponding scores.
+Based on this information, the coding agent analyzes whether the read and write operations function as expected, identifies the root causes of underperforming cases, and determines which past improvements were effective.
+Consequently, the coding agent generates a code patch to apply to the current program and produces a new change log to guide future iterations.
+The complete prompt template is provided in Appendix~\ref{app:prompts}.
+
+\textbf{Constraint checks and automated repair.}
+Before applying the updated memory program, the code evolution process executes a set of runtime checks to ensure its quality.
+If any check fails, the memory program and its corresponding error messages are resubmitted to the coding agent for repair.
+\rev{These checks prevent low-quality programs from consuming excessive computational resources, and any program that still fails after a fixed number of repair attempts is discarded.}
+
+\subsection{Population-Based Program Search}
+\label{sec:population}
+
+Unlike function search or prompt optimization, evaluating a memory program in \sysname{} can be highly expensive.
+For any program change, the agent must regenerate episode knowledge and evaluate the program on validation tasks.
+Therefore, the search procedure should reuse useful intermediate programs rather than follow a single update trajectory.
+
+Instead of continuously updating a single program, which can cause the evolution algorithm to fall into local optima, we maintain a program pool.
+We initialize the search with a small set of simple seed programs (Appendix~\ref{app:seeds}).
+In each iteration, we sample a parent program from the pool with probability biased toward higher validation scores.
+Specifically, the probability \rev{$\Pr(P_i)$ of selecting program $P_i$} from the pool is computed as:
+\begin{equation}
+    \rev{\Pr(P_i) = \frac{\exp(\mathcal{J}(P_i) / \tau)}{\sum_{j} \exp(\mathcal{J}(P_j) / \tau)}},
+\end{equation}
+where \rev{$\mathcal{J}(\cdot)$ is the static validation score (Eq.~\ref{eq:objective})} and $\tau$ is the softmax temperature.
+The coding agent then applies a reflective mutation step to the selected parent, and the resulting child program is added back to the pool.
+This design balances exploration and exploitation; top-performing programs have a greater chance of being selected for improvement, yet lower-scoring programs retain a non-zero probability of being explored.
+We use additional subset-selection procedures to reduce evaluation cost, and describe these implementation details in Appendix~\ref{app:representative-subset}.
+
+Overall, \sysname{} provides an efficient reflective code evolution procedure for memory-program search.
+In the following section, we provide an empirical analysis to validate our method.
+
+\input{tables/main_results}

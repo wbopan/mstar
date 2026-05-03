@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Run remaining stability experiments (locomo-eseed1 already done)
 set -euo pipefail
-cd /Users/panwenbo/Documents/Projects/ProgrammaticMemory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
 
 TASK_MODEL=azure/gpt-5.4-mini
 REFLECT_MODEL=azure/gpt-5.3-codex
@@ -16,7 +18,7 @@ run() {
     echo "================================================================"
     echo "  $label"
     echo "================================================================"
-    uv run python -m programmaticmemory.evolution "$@"
+    uv run python -m mstar.evolution "$@"
 }
 
 run "Stability: LoCoMo / eseed=2" \

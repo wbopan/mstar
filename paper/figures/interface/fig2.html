@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fig 2 — Memory Program Interface</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=block" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Regular.ttf") format("truetype");
+      font-weight: 400; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Bold.ttf") format("truetype");
+      font-weight: 700; font-style: normal;
+    }
+    @font-face {
+      font-family: "Libertinus Sans";
+      src: url("/Users/panwenbo/Library/Fonts/LibertinusSans-Italic.ttf") format("truetype");
+      font-weight: 400; font-style: italic;
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; font-family: "Libertinus Sans", sans-serif; }
+  </style>
+</head>
+<body>
+
+<script>
+const FONT = "Libertinus Sans, sans-serif";
+const MONO = "JetBrains Mono, monospace";
+
+const C_INSTR  = "#7B1FA2";
+const C_SCHEMA = "#1565C0";
+const C_LOGIC  = "#2E7D32";
+const C_INSTR_BG  = "#F3E5F5";
+const C_SCHEMA_BG = "#E3F2FD";
+const C_LOGIC_BG  = "#E8F5E9";
+
+const SYN = {
+  kw: '#a626a4', str: '#50a14f', comment: '#a0a1a7',
+  fn: '#4078f2', cls: '#c18401', op: '#383a42',
+  fg: '#383a42', type: '#986801', dec: '#b060c0', ln: '#b0b0b0',
+};
+
+const W = 400;
+const ACCENT_W = 4;
+const LN_X = 22;
+const CODE_X = 46;
+const LH = 15;
+const SECTION_GAP = 0;
+const HEADER_H = 36;
+const PAD = 0;
+const R = 0;
+
+const sections = [
+  {
+    label: "Instructions",
+    color: C_INSTR,
+    bg: C_INSTR_BG,
+    desc: "Prompt constants for the task agent",
+    lines: [
+      [1, [["INSTRUCTION_KNOWLEDGE_ITEM", C_INSTR], [" = ", SYN.op], ['"..."', SYN.str]]],
+      [2, [["INSTRUCTION_QUERY", C_INSTR], [" = ", SYN.op], ['"..."', SYN.str]]],
+      [3, [["INSTRUCTION_RESPONSE", C_INSTR], [" = ", SYN.op], ['"..."', SYN.str]]],
+      [4, []],
+    ],
+  },
+  {
+    label: "Schema",
+    color: C_SCHEMA,
+    bg: C_SCHEMA_BG,
+    desc: "Dataclass definitions for storage and retrieval",
+    lines: [
+      [5,  [["class", SYN.kw], [" KnowledgeItem", SYN.cls], [":", SYN.op], ["  ", SYN.fg], ["# what to store", SYN.comment]]],
+      [6,  [["    topic", SYN.fg], [": ", SYN.op], ["str", SYN.type]]],
+      [7,  [["    content", SYN.fg], [": ", SYN.op], ["str", SYN.type]]],
+      [8, []],
+      [9,  [["class", SYN.kw], [" Query", SYN.cls], [":", SYN.op], ["  ", SYN.fg], ["# how to retrieve", SYN.comment]]],
+      [10, [["    question", SYN.fg], [": ", SYN.op], ["str", SYN.type]]],
+      [11, [["    category", SYN.fg], [": ", SYN.op], ["str", SYN.type]]],
+      [12, []],
+    ],
+  },
+  {
+    label: "Logic",
+    color: C_LOGIC,
+    bg: C_LOGIC_BG,
+    desc: "KnowledgeBase class with toolkit access",
+    lines: [
+      [13, [["class", SYN.kw], [" KnowledgeBase", SYN.cls], [":", SYN.op]]],
+      [14, []],
+      [15, [["    ", SYN.fg], ["def", SYN.kw], [" write", SYN.fn], ["(self, item: ", SYN.fg], ["KnowledgeItem", SYN.type], ["):", SYN.fg]]],
+      [16, [["        self.db.execute(...)", SYN.fg]]],
+      [17, []],
+      [18, [["    ", SYN.fg], ["def", SYN.kw], [" read", SYN.fn], ["(self, q: ", SYN.fg], ["Query", SYN.type], [") -> ", SYN.op], ["str", SYN.type], [":", SYN.fg]]],
+      [19, [["        ", SYN.fg], ["return", SYN.kw], [" self.chroma.query(...)", SYN.fg]]],
+      [20, []],
+    ],
+  },
+];
+
+// Compute height
+const LABEL_H = 20;
+let totalH = HEADER_H + PAD;
+sections.forEach((sec, i) => {
+  if (i > 0) totalH += SECTION_GAP;
+  totalH += LABEL_H + sec.lines.length * LH + 4;
+});
+totalH += PAD;
+
+// SVG
+const svg = d3.select("body").append("svg")
+  .attr("width", W).attr("height", totalH)
+  .attr("xmlns", "http://www.w3.org/2000/svg");
+const defs = svg.append("defs");
+
+// Clip path for container (clips accent bars at corners)
+defs.append("clipPath").attr("id", "clip")
+  .append("rect").attr("width", W).attr("height", totalH).attr("rx", R);
+const g = svg.append("g").attr("clip-path", "url(#clip)");
+
+// White background
+g.append("rect").attr("width", W).attr("height", totalH).attr("fill", "#fff");
+
+// Header (top corners rounded only)
+g.append("rect").attr("width", W).attr("height", HEADER_H + R).attr("fill", "#fcfcfc").attr("rx", R);
+g.append("rect").attr("y", R).attr("width", W).attr("height", HEADER_H - R).attr("fill", "#fcfcfc");
+g.append("line").attr("x1", 0).attr("y1", HEADER_H).attr("x2", W).attr("y2", HEADER_H)
+  .attr("stroke", "#ccc").attr("stroke-width", 0.8);
+
+// Traffic lights
+const TL_Y = HEADER_H / 2;
+[["#FF5F57", "#E0443E"], ["#FEBC2E", "#DEA123"], ["#28C840", "#1AAB29"]].forEach(([fill, stroke], i) => {
+  g.append("circle").attr("cx", 16 + i * 20).attr("cy", TL_Y).attr("r", 6)
+    .attr("fill", fill).attr("stroke", stroke).attr("stroke-width", 0.5);
+});
+
+// Filename
+g.append("text").attr("x", W / 2).attr("y", TL_Y + 1)
+  .attr("text-anchor", "middle").attr("dominant-baseline", "central")
+  .attr("font-size", "14px").attr("font-weight", "600").attr("fill", "#444").attr("font-family", MONO)
+  .text("memory_program_template.py");
+
+// Sections
+let curY = HEADER_H + PAD;
+sections.forEach((sec, si) => {
+  if (si > 0) curY += SECTION_GAP;
+  const sectionH = LABEL_H + sec.lines.length * LH + 4;
+
+  // Background band
+  g.append("rect").attr("x", ACCENT_W).attr("y", curY)
+    .attr("width", W - ACCENT_W).attr("height", sectionH)
+    .attr("fill", sec.bg).attr("fill-opacity", 0.5);
+
+  // Left accent bar
+  g.append("rect").attr("x", 0).attr("y", curY)
+    .attr("width", ACCENT_W).attr("height", sectionH)
+    .attr("fill", sec.color);
+
+  // Badge
+  const badgeW = sec.label.length * 7.5 + 16;
+  g.append("rect").attr("x", ACCENT_W + 8).attr("y", curY + 3)
+    .attr("width", badgeW).attr("height", 16)
+    .attr("fill", sec.color).attr("fill-opacity", 0.12);
+  g.append("text").attr("x", ACCENT_W + 8 + badgeW / 2).attr("y", curY + 12)
+    .attr("text-anchor", "middle").attr("dominant-baseline", "central")
+    .attr("font-size", "10px").attr("font-weight", "700").attr("fill", sec.color).attr("font-family", FONT)
+    .text(sec.label);
+
+  // Description
+  g.append("text").attr("x", ACCENT_W + 8 + badgeW + 8).attr("y", curY + 12)
+    .attr("dominant-baseline", "central")
+    .attr("font-size", "9.5px").attr("fill", "#888").attr("font-family", FONT)
+    .text(sec.desc);
+
+  // Code lines
+  const codeY = curY + LABEL_H;
+  sec.lines.forEach(([lineNum, tokens], li) => {
+    const cy = codeY + li * LH + LH * 0.6;
+    if (lineNum !== null) {
+      g.append("text").attr("x", LN_X).attr("y", cy)
+        .attr("text-anchor", "end").attr("dominant-baseline", "central")
+        .attr("font-size", "9px").attr("font-family", MONO).attr("fill", SYN.ln)
+        .text(lineNum);
+    }
+    if (!tokens || tokens.length === 0) return;
+    const t = g.append("text").attr("x", CODE_X).attr("y", cy)
+      .attr("dominant-baseline", "central")
+      .attr("font-size", "12px").attr("font-family", MONO).attr("fill", SYN.fg)
+      .attr("xml:space", "preserve");
+    tokens.forEach(([text, color]) => {
+      t.append("tspan").attr("fill", color || SYN.fg).text(text);
+    });
+  });
+
+  curY += sectionH;
+});
+
+// Border (on top, unclipped)
+svg.append("rect").attr("width", W).attr("height", totalH)
+  .attr("fill", "none").attr("stroke", "#999").attr("stroke-width", 1.5).attr("rx", R);
+
+</script>
+</body>
+</html>

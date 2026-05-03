@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fig 4 — Cross-Task Transfer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&display=block" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; font-family: "Source Sans 3", "Helvetica Neue", sans-serif; }
+  </style>
+</head>
+<body>
+<div id="chart"></div>
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const programs = [
+  { key: 'seed',    label: 'Universal mem.',     color: '#aaa',    colorMuted: '#d5d5d5', accent: '#777' },
+  { key: 'locomo',  label: 'LoCoMo mem.',       color: '#4a90d9', colorMuted: '#c4d8ef', accent: '#2c5a8c', source: 'LoCoMo' },
+  { key: 'alf',     label: 'ALFWorld mem.',      color: '#3daa8f', colorMuted: '#b5e0d2', accent: '#1f6b56', source: 'ALFWorld' },
+  { key: 'pr',      label: 'Legal mem.',         color: '#7B61FF', colorMuted: '#cdc0ff', accent: '#5340b0', source: 'PRBench' },
+];
+
+const datasets = [
+  { key: 'locomo', label: 'LoCoMo',  native: 'locomo', yLabel: 'Token F1' },
+  { key: 'alf',    label: 'ALFWorld', native: 'alf',    yLabel: 'Success Rate' },
+  { key: 'pr',     label: 'PRBench',  native: 'pr',     yLabel: 'Rubric Score' },
+];
+
+const scores = {
+  seed:   { locomo: 0.256, alf: 0.643, pr: 0.466 },
+  locomo: { locomo: 0.459, alf: 0.620, pr: 0.055 },
+  alf:    { locomo: 0.021, alf: 0.881, pr: 0.576 },
+  pr:     { locomo: 0.086, alf: 0.580, pr: 0.660 },
+};
+
+// ================================================================
+// LAYOUT
+// ================================================================
+const PW = 160, PH = 150;
+const GAP = 6;
+const M = { t: 4, r: 6, b: 4, l: 6 };
+const PM = { t: 22, r: 4, b: 38, l: 32 };
+
+const W = M.l + 3 * PW + 2 * GAP + M.r;
+const H = M.t + PH + M.b;
+
+const svg = d3.select('#chart').append('svg')
+  .attr('width', W).attr('height', H)
+  .style('font-family', '"Source Sans 3", sans-serif');
+
+const SERIF = '"Source Serif 4", Georgia, serif';
+
+// ================================================================
+// PANELS
+// ================================================================
+datasets.forEach((ds, di) => {
+  const px = M.l + di * (PW + GAP);
+  const py = M.t;
+  const pL = px + PM.l, pR = px + PW - PM.r;
+  const pT = py + PM.t, pB = py + PH - PM.b;
+  const pW = pR - pL, pH = pB - pT;
+  const g = svg.append('g');
+
+  const vals = programs.map(p => scores[p.key][ds.key]);
+  const maxVal = d3.max(vals);
+  const yMax = Math.min(1.0, Math.ceil(maxVal * 10 + 0.8) / 10);
+
+  // Scales
+  const x = d3.scaleBand().domain(programs.map(p => p.key)).range([0, pW]).padding(0.22);
+  const y = d3.scaleLinear().domain([0, yMax]).range([pH, 0]);
+
+  // Plot frame
+  g.append('rect').attr('x', pL).attr('y', pT).attr('width', pW).attr('height', pH)
+    .attr('fill', 'none').attr('stroke', '#333').attr('stroke-width', 0.8);
+
+  // Grid
+  y.ticks(5).forEach(t => {
+    if (t === 0) return;
+    g.append('line').attr('x1', pL).attr('y1', pT + y(t)).attr('x2', pR).attr('y2', pT + y(t))
+      .attr('stroke', '#e8e8e8').attr('stroke-width', 0.5);
+  });
+
+  // Y ticks
+  y.ticks(5).forEach(t => {
+    g.append('text').attr('x', pL - 3).attr('y', pT + y(t))
+      .attr('font-size', '7px').attr('fill', '#555')
+      .attr('text-anchor', 'end').attr('dominant-baseline', 'central')
+      .text(t === 0 ? '0' : t.toFixed(1));
+  });
+
+  // Bars
+  programs.forEach(p => {
+    const val = scores[p.key][ds.key];
+    const isBest = val === maxVal;
+    const fill = isBest ? p.color : p.colorMuted;
+    const bx = pL + x(p.key), bw = x.bandwidth();
+    const by = pT + y(val), bh = pH - y(val);
+
+    g.append('rect').attr('x', bx).attr('y', by).attr('width', bw).attr('height', bh)
+      .attr('fill', fill)
+      .attr('stroke', isBest ? p.accent : 'none').attr('stroke-width', isBest ? 1.0 : 0);
+
+    // Value on top
+    g.append('text').attr('x', bx + bw / 2).attr('y', by - 3)
+      .attr('font-size', '6.5px').attr('font-weight', isBest ? 700 : 400)
+      .attr('fill', isBest ? p.accent : '#aaa')
+      .attr('text-anchor', 'middle')
+      .text(val.toFixed(2));
+
+  });
+
+  // Dashed baseline at Seed (Universal) score
+  const seedVal = scores['seed'][ds.key];
+  const seedLineY = pT + y(seedVal);
+  g.append('line').attr('x1', pL).attr('y1', seedLineY).attr('x2', pR).attr('y2', seedLineY)
+    .attr('stroke', '#999').attr('stroke-width', 0.8)
+    .attr('stroke-dasharray', '3,2');
+
+  // X labels
+  programs.forEach(p => {
+    const cx = pL + x(p.key) + x.bandwidth() / 2;
+    g.append('text').attr('x', cx).attr('y', pB + 5)
+      .attr('font-size', '6.5px').attr('fill', '#444')
+      .attr('text-anchor', 'end').attr('dominant-baseline', 'hanging')
+      .attr('transform', `rotate(-25, ${cx}, ${pB + 5})`)
+      .text(p.label);
+  });
+
+  // Panel title — aligned to plot area center
+  g.append('text').attr('x', (pL + pR) / 2).attr('y', pT - 5)
+    .attr('font-size', '9px').attr('font-weight', 700).attr('fill', '#000')
+    .attr('text-anchor', 'middle').attr('font-family', SERIF)
+    .text(ds.label);
+
+  // Y-axis label (rotated)
+  g.append('text')
+    .attr('x', -(pT + pH / 2)).attr('y', pL - 18)
+    .attr('font-size', '7px').attr('fill', '#555').attr('font-style', 'italic')
+    .attr('text-anchor', 'middle')
+    .attr('transform', 'rotate(-90)')
+    .text(ds.yLabel);
+});
+
+
+
+</script>
+</body>
+</html>

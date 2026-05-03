@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from programmaticmemory.evolution.sandbox import CompileError, compile_kb_program, smoke_test
-from programmaticmemory.evolution.toolkit import Toolkit, ToolkitConfig
+from mstar.evolution.sandbox import CompileError, compile_kb_program, smoke_test
+from mstar.evolution.toolkit import Toolkit, ToolkitConfig
 
-BASELINES_DIR = Path(__file__).resolve().parents[2] / "src" / "programmaticmemory" / "baselines"
+BASELINES_DIR = Path(__file__).resolve().parents[2] / "src" / "mstar" / "baselines"
 
 
 class TestBaselineSmokeTests:
@@ -49,7 +49,7 @@ class TestBaselineBehavior:
         toolkit.close()
 
 
-_ALMA_BASELINES_DIR = Path(__file__).resolve().parents[2] / "src" / "programmaticmemory" / "baselines"
+_ALMA_BASELINES_DIR = Path(__file__).resolve().parents[2] / "src" / "mstar" / "baselines"
 
 
 class TestTrajectoryRetrieval:

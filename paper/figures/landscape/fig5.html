@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fig 5 — Program Embedding Landscape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=block" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #fff;
+    font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  #chart { position: relative; }
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(255,255,255,0.97);
+    border: 0.8px solid #999;
+    padding: 5px 8px;
+    font-family: "STIX Two Text", "Times New Roman", serif;
+    font-size: 9.5px;
+    line-height: 1.5;
+    opacity: 0;
+    transition: opacity 0.12s;
+    max-width: 240px;
+    z-index: 10;
+  }
+  .tooltip .tt-label { font-weight: 700; margin-bottom: 1px; }
+  .tooltip .tt-row { color: #333; }
+</style>
+</head>
+<body>
+<div id="chart">
+  <div class="tooltip" id="tooltip"></div>
+</div>
+<script>
+const FONT = "Source Serif 4, Source Serif Pro, Georgia, serif";
+
+// Colors grouped by task family:
+// Conversational memory (LoCoMo): blues
+// Medical (HealthBench): greens
+// Legal/Finance (PRBench): warm oranges/reds
+// Embodied (ALFWorld): purples
+const PALETTE = {
+  "LoCoMo":         "#1f77b4",
+  "LoCoMo-Linear":  "#6baed6",
+  "HB-Data":        "#2ca02c",
+  "HB-Emergency":   "#74c476",
+  "PRB-Finance":    "#e6550d",
+  "PRB-Legal":      "#d62728",
+  "ALFWorld-Seen":  "#8c6bb1",
+  "ALFWorld-Unseen":"#6a3d9a",
+  "Seed":           "#7f7f7f",
+};
+
+const FADED = "#dcdcdc";
+const FADED_EDGE = "#ececec";
+
+// Zone annotations — ellipse geometry from zone editor (editor plotSize=600, scaled to 400 by *2/3)
+const S = 2/3;  // editor (600px) → fig5 (400px) scale factor
+const ZONES = [
+  {
+    ids: new Set([
+      "t1-alfworld-seen-ours:iter_11","t1-alfworld-seen-ours:iter_12","t1-alfworld-seen-ours:iter_13",
+      "t1-alfworld-seen-ours:iter_14","t1-alfworld-seen-ours:iter_15","t1-alfworld-seen-ours:iter_17",
+      "t1-alfworld-seen-ours:iter_19","t1-alfworld-seen-ours:iter_20","t1-alfworld-seen-ours:iter_3",
+      "t1-alfworld-seen-ours:iter_4","t1-alfworld-seen-ours:iter_5","t1-alfworld-seen-ours:iter_6",
+      "t1-alfworld-seen-ours:iter_7","t1-alfworld-seen-ours:iter_9","t1-alfworld-unseen-ours:iter_1",
+      "t1-alfworld-unseen-ours:iter_10","t1-alfworld-unseen-ours:iter_11","t1-alfworld-unseen-ours:iter_13",
+      "t1-alfworld-unseen-ours:iter_14","t1-alfworld-unseen-ours:iter_4","t1-hb-data-tasks-ours:iter_11",
+      "t1-hb-data-tasks-ours:iter_12","t1-hb-data-tasks-ours:iter_13","t1-hb-data-tasks-ours:iter_15",
+      "t1-hb-data-tasks-ours:iter_16","t1-hb-data-tasks-ours:iter_17","t1-hb-data-tasks-ours:iter_18",
+      "t1-hb-data-tasks-ours:iter_19","t1-hb-data-tasks-ours:iter_2","t1-hb-data-tasks-ours:iter_20",
+      "t1-hb-data-tasks-ours:iter_3","t1-hb-data-tasks-ours:iter_4","t1-hb-data-tasks-ours:iter_5",
+      "t1-hb-data-tasks-ours:iter_6","t1-hb-data-tasks-ours:iter_7","t1-hb-data-tasks-ours:iter_9",
+      "t1-hb-emergency-ours:iter_5","t1-locomo-ours:iter_11","t1-locomo-ours:iter_13",
+      "t1-locomo-ours:iter_16","t1-locomo-ours:iter_3","t1-locomo-ours:iter_5",
+      "t1-locomo-ours:iter_8","t1-locomo-ours:iter_9","t1-pr-finance-ours:iter_10",
+      "t1-pr-finance-ours:iter_14","t1-pr-finance-ours:iter_3","t1-pr-finance-ours:iter_5",
+      "t1-pr-finance-ours:iter_8","t1-pr-finance-ours:iter_9",
+    ]),
+    main: "Structured RAG",
+    sub: "Organizes data in SQL tables and vector indices for structured retrieval",
+    color: "#2ca02c",
+    ecx: 321*S, ecy: 503*S, erx: 103*S, ery: 85*S, eangle: 23,
+    anchorX: 421*S, anchorY: 508*S,
+  },
+  {
+    ids: new Set([
+      "t1-alfworld-seen-ours:iter_1","t1-alfworld-seen-ours:iter_10","t1-alfworld-seen-ours:iter_16",
+      "t1-alfworld-seen-ours:iter_18","t1-alfworld-seen-ours:iter_2","t1-alfworld-seen-ours:iter_8",
+      "t1-alfworld-unseen-ours:iter_12","t1-alfworld-unseen-ours:iter_15","t1-alfworld-unseen-ours:iter_16",
+      "t1-alfworld-unseen-ours:iter_17","t1-alfworld-unseen-ours:iter_18","t1-alfworld-unseen-ours:iter_19",
+      "t1-alfworld-unseen-ours:iter_2","t1-alfworld-unseen-ours:iter_20","t1-alfworld-unseen-ours:iter_3",
+      "t1-alfworld-unseen-ours:iter_5","t1-alfworld-unseen-ours:iter_6","t1-alfworld-unseen-ours:iter_7",
+      "t1-alfworld-unseen-ours:iter_8","t1-alfworld-unseen-ours:iter_9","t1-hb-data-tasks-ours:iter_1",
+      "t1-hb-emergency-ours:iter_1","t1-hb-emergency-ours:iter_11","t1-hb-emergency-ours:iter_12",
+      "t1-hb-emergency-ours:iter_14","t1-hb-emergency-ours:iter_15","t1-hb-emergency-ours:iter_17",
+      "t1-hb-emergency-ours:iter_18","t1-hb-emergency-ours:iter_19","t1-hb-emergency-ours:iter_2",
+      "t1-hb-emergency-ours:iter_20","t1-hb-emergency-ours:iter_3","t1-hb-emergency-ours:iter_4",
+      "t1-hb-emergency-ours:iter_6","t1-hb-emergency-ours:iter_7","t1-hb-emergency-ours:iter_8",
+      "t1-hb-emergency-ours:iter_9","t1-locomo-ours:iter_2","t1-locomo-ours:iter_4",
+      "t1-pr-finance-ours:iter_1","t1-pr-finance-ours:iter_4","t1-pr-legal-ours:iter_2",
+      "t1-pr-legal-ours:iter_4","t2-locomo-linear:iter_1",
+    ]),
+    main: "LLM-Centric",
+    sub: "Relies on the LLM to filter and rank raw text at read time",
+    color: "#7f7f7f",
+    ecx: 349*S, ecy: 74*S, erx: 197*S, ery: 58*S, eangle: 7,
+    anchorX: 540*S, anchorY: 83*S,
+  },
+  {
+    ids: new Set([
+      "t1-locomo-ours:iter_1","t1-locomo-ours:iter_10","t1-locomo-ours:iter_14",
+      "t1-locomo-ours:iter_15","t1-locomo-ours:iter_19","t1-locomo-ours:iter_20",
+      "t2-locomo-linear:iter_10","t2-locomo-linear:iter_11","t2-locomo-linear:iter_12",
+      "t2-locomo-linear:iter_13","t2-locomo-linear:iter_14","t2-locomo-linear:iter_15",
+      "t2-locomo-linear:iter_16","t2-locomo-linear:iter_17","t2-locomo-linear:iter_18",
+      "t2-locomo-linear:iter_19","t2-locomo-linear:iter_2","t2-locomo-linear:iter_20",
+      "t2-locomo-linear:iter_3","t2-locomo-linear:iter_5","t2-locomo-linear:iter_6",
+      "t2-locomo-linear:iter_7","t2-locomo-linear:iter_8","t2-locomo-linear:iter_9",
+    ]),
+    main: "Semantic Search",
+    sub: "Pure vector similarity search over multi-field knowledge items",
+    color: "#1f77b4",
+    ecx: 91*S, ecy: 176*S, erx: 83*S, ery: 64*S, eangle: 10,
+    anchorX: 173*S, anchorY: 180*S,
+  },
+  {
+    ids: new Set([
+      "t1-hb-data-tasks-ours:iter_10","t1-hb-data-tasks-ours:iter_14","t1-hb-data-tasks-ours:iter_8",
+      "t1-hb-emergency-ours:iter_10","t1-locomo-ours:iter_17","t1-locomo-ours:iter_18",
+      "t1-locomo-ours:iter_6","t1-locomo-ours:iter_7","t1-pr-finance-ours:iter_11",
+      "t1-pr-finance-ours:iter_12","t1-pr-finance-ours:iter_15","t1-pr-finance-ours:iter_16",
+      "t1-pr-finance-ours:iter_17","t1-pr-finance-ours:iter_18","t1-pr-finance-ours:iter_19",
+      "t1-pr-finance-ours:iter_20","t1-pr-finance-ours:iter_4","t1-pr-finance-ours:iter_6",
+      "t1-pr-legal-ours:iter_1","t1-pr-legal-ours:iter_12","t1-pr-legal-ours:iter_13",
+      "t1-pr-legal-ours:iter_15","t1-pr-legal-ours:iter_16","t1-pr-legal-ours:iter_18",
+      "t1-pr-legal-ours:iter_20","t2-locomo-linear:iter_4",
+    ]),
+    main: "Hybrid Retrieval",
+    sub: "Combines SQL indexing with vector search and LLM re-ranking",
+    color: "#ff9257",
+    ecx: 300*S, ecy: 198*S, erx: 57*S, ery: 123*S, eangle: 59,
+    anchorX: 410*S, anchorY: 152*S,
+  },
+  {
+    ids: new Set([
+      "t1-pr-legal-ours:iter_10","t1-pr-legal-ours:iter_11","t1-pr-legal-ours:iter_14",
+      "t1-pr-legal-ours:iter_17","t1-pr-legal-ours:iter_3","t1-pr-legal-ours:iter_5",
+      "t1-pr-legal-ours:iter_8","t1-pr-legal-ours:iter_9",
+    ]),
+    main: "Relational Index",
+    sub: "Stores facts in multi-table SQL with indexed queries",
+    color: "#fa0000",
+    ecx: 246*S, ecy: 357*S, erx: 21*S, ery: 36*S, eangle: 0,
+    anchorX: 267*S, anchorY: 356*S,
+  },
+];
+
+// ── Layout: left | gap | center scatter | gap | right annotations ────
+const mainMargin = { top: 6, right: 10, bottom: 22, left: 10 };
+const plotSize = 400;
+const centerW = plotSize + mainMargin.left + mainMargin.right;
+const totalH = plotSize + mainMargin.top + mainMargin.bottom;
+const gap = 10;
+const annotW = 130;  // right annotation panel width
+let totalW;
+// Left panels align with the right panel's plot area (top=mainMargin.top, bottom=mainMargin.top+plotSize)
+const leftGap = 8;
+const leftPlotTop = mainMargin.top;
+const leftPlotBottom = mainMargin.top + plotSize;
+const leftAvailH = leftPlotBottom - leftPlotTop;  // = plotSize
+const leftMargin = { top: 6, right: 8, bottom: 20, left: 8 };
+const leftPanelH = (leftAvailH - leftGap) / 2;
+// Make inner plot area square: ih = leftPanelH - top - bottom
+const leftInner = leftPanelH - leftMargin.top - leftMargin.bottom;
+const leftW = leftInner + leftMargin.left + leftMargin.right;
+const centerX = leftW + gap;  // where center panel starts
+totalW = leftW + gap + centerW + gap + annotW;
+
+// ── Marker shapes per archetype ──────────────────────────────────────
+// Seed: rotated square (45deg diamond)
+const seedSize = 5;
+const seedPath = `M0,${-seedSize} L${seedSize},0 L0,${seedSize} L${-seedSize},0 Z`;
+
+// Archetype markers (hand-crafted SVG paths, all ~10px bounding box)
+const MARKERS = {
+  // Vector+LLM: circle (most common, default)
+  "Vector+LLM":  { gen: d3.symbol().type(d3.symbolCircle), size: 51, sizeSmall: 26 },
+  // Vector-only: triangle up
+  "Vector-only": { gen: d3.symbol().type(d3.symbolTriangle), size: 55, sizeSmall: 28 },
+  // SQL+Vector: square (upright) — SQL family
+  "SQL+Vector":  { gen: d3.symbol().type(d3.symbolSquare), size: 46, sizeSmall: 24 },
+  // SQL-only: rotated square (diamond) — SQL family, similar to SQL+Vector
+  "SQL-only":    { gen: d3.symbol().type(d3.symbolSquare), size: 46, sizeSmall: 24, rotate: 45 },
+  // LLM-centric: cross
+  "LLM-centric": { gen: d3.symbol().type(d3.symbolCross), size: 55, sizeSmall: 28 },
+};
+
+// ── Load & render ───────────────────────────────────────────────────────
+d3.json("fig5_data.json").then(data => {
+  const programs = data.programs;
+  const edges = data.edges;
+
+  programs.forEach(p => { p.color = PALETTE[p.label] || p.color; });
+
+  const idMap = new Map(programs.map(p => [p.id, p]));
+
+  // Shared data extent
+  const xExt = d3.extent(programs, d => d.x);
+  const yExt = d3.extent(programs, d => d.y);
+  const pad = 0.5;
+  const xDomain = [xExt[0] - pad, xExt[1] + pad];
+  const yDomain = [yExt[0] - pad, yExt[1] + pad];
+
+  const seedIds = new Set(programs.filter(p => p.is_seed).map(p => p.id));
+
+  // SVG
+  const svg = d3.select("#chart")
+    .append("svg")
+    .attr("width", totalW)
+    .attr("height", totalH)
+    .attr("xmlns", "http://www.w3.org/2000/svg");
+
+  const tooltip = d3.select("#tooltip");
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Helper: draw a highlight panel (left sub-panels)
+  // ════════════════════════════════════════════════════════════════════════
+  function drawHighlightPanel(container, w, h, highlightLabel, highlightColor, title, scoreAnchor, finalScore) {
+    const m = leftMargin;
+    const iw = w - m.left - m.right;
+    const ih = h - m.top - m.bottom;
+
+    const x = d3.scaleLinear().domain(xDomain).range([0, iw]);
+    const y = d3.scaleLinear().domain(yDomain).range([ih, 0]);
+
+    const g = container.append("g").attr("transform", `translate(${m.left},${m.top})`);
+
+    // Box border
+    g.append("rect").attr("width", iw).attr("height", ih)
+      .attr("fill", "none").attr("stroke", "#333").attr("stroke-width", 0.8);
+
+    // Light grid
+    const gx = x.ticks(5), gy = y.ticks(5);
+    const gridG = g.append("g");
+    gx.forEach(t => {
+      gridG.append("line").attr("x1", x(t)).attr("x2", x(t))
+        .attr("y1", 0).attr("y2", ih).attr("stroke", "#e8e8e8").attr("stroke-width", 0.5);
+    });
+    gy.forEach(t => {
+      gridG.append("line").attr("x1", 0).attr("x2", iw)
+        .attr("y1", y(t)).attr("y2", y(t)).attr("stroke", "#e8e8e8").attr("stroke-width", 0.5);
+    });
+
+    const hlIds = new Set(programs.filter(p => p.label === highlightLabel).map(p => p.id));
+
+    // ── Edges ──────────────────────────────────────────────────────────
+    const edgeG = g.append("g");
+
+    // Faded edges (non-highlight, skip seed-connected)
+    edges.forEach(e => {
+      const from = idMap.get(e.from);
+      const to = idMap.get(e.to);
+      if (!from || !to) return;
+      if (from.is_seed || to.is_seed) return;
+      if (hlIds.has(e.from) || hlIds.has(e.to)) return;
+      edgeG.append("line")
+        .attr("x1", x(from.x)).attr("y1", y(from.y))
+        .attr("x2", x(to.x)).attr("y2", y(to.y))
+        .attr("stroke", FADED_EDGE)
+        .attr("stroke-width", 0.3)
+        .attr("opacity", 0.25);
+    });
+
+    // Highlighted edges: within highlight group + to/from seeds
+    edges.forEach(e => {
+      const from = idMap.get(e.from);
+      const to = idMap.get(e.to);
+      if (!from || !to) return;
+      const touchesHL = hlIds.has(e.from) || hlIds.has(e.to);
+      if (!touchesHL) return;
+      const fromOK = hlIds.has(e.from) || seedIds.has(e.from);
+      const toOK = hlIds.has(e.to) || seedIds.has(e.to);
+      if (fromOK && toOK) {
+        edgeG.append("line")
+          .attr("x1", x(from.x)).attr("y1", y(from.y))
+          .attr("x2", x(to.x)).attr("y2", y(to.y))
+          .attr("stroke", highlightColor)
+          .attr("stroke-width", 1.5)
+          .attr("stroke-dasharray", "4,2")
+          .attr("opacity", 0.55);
+      }
+    });
+
+    // ── Points ─────────────────────────────────────────────────────────
+    const symStar = d3.symbol().type(d3.symbolStar).size(50);
+    const pointsG = g.append("g");
+
+    function drawPoint(p, color, opacity, strokeColor, strokeW) {
+      if (p.is_seed) {
+        pointsG.append("path").datum(p).attr("d", seedPath)
+          .attr("transform", `translate(${x(p.x)},${y(p.y)})`)
+          .attr("fill", color).attr("fill-opacity", opacity)
+          .attr("stroke", strokeColor).attr("stroke-width", strokeW);
+      } else if (p.is_best) {
+        pointsG.append("path").datum(p).attr("d", symStar)
+          .attr("transform", `translate(${x(p.x)},${y(p.y)})`)
+          .attr("fill", color).attr("fill-opacity", opacity)
+          .attr("stroke", strokeColor).attr("stroke-width", strokeW);
+      } else {
+        const m = MARKERS[p.archetype] || MARKERS["Vector+LLM"];
+        const d = m.gen.size(m.sizeSmall)();
+        const rot = m.rotate ? ` rotate(${m.rotate})` : "";
+        pointsG.append("path").datum(p).attr("d", d)
+          .attr("transform", `translate(${x(p.x)},${y(p.y)})${rot}`)
+          .attr("fill", color).attr("fill-opacity", opacity)
+          .attr("stroke", strokeColor).attr("stroke-width", strokeW);
+      }
+    }
+
+    // Faded points
+    programs.filter(p => !hlIds.has(p.id) && !p.is_seed).forEach(p => {
+      drawPoint(p, FADED, 0.35, "#fff", 0.2);
+    });
+    // Seeds
+    programs.filter(p => p.is_seed).forEach(p => {
+      const connected = edges.some(e =>
+        (e.from === p.id && hlIds.has(e.to)) || (e.to === p.id && hlIds.has(e.from))
+      );
+      drawPoint(p, connected ? highlightColor : FADED,
+        connected ? 0.85 : 0.35, connected ? "#333" : "#fff", connected ? 0.5 : 0.2);
+    });
+    // Highlighted points
+    programs.filter(p => hlIds.has(p.id)).forEach(p => {
+      drawPoint(p, highlightColor, p.is_best ? 1.0 : 0.8,
+        p.is_best ? "#222" : "#fff", p.is_best ? 0.6 : 0.3);
+    });
+
+    // Title (below panel)
+    g.append("text")
+      .attr("x", iw / 2).attr("y", ih + 14)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "10px")
+      .attr("font-weight", "600")
+      .attr("fill", "#333")
+      .attr("font-family", FONT)
+      .text(title);
+
+    // Best score annotation next to star
+    const bestProg = programs.find(p => hlIds.has(p.id) && p.is_best);
+    if (bestProg) {
+      const bx = x(bestProg.x), by = y(bestProg.y);
+      const anchorLeft = scoreAnchor === "left";
+      g.append("text")
+        .attr("x", anchorLeft ? bx - 12 : bx + 12)
+        .attr("y", by + 1)
+        .attr("text-anchor", anchorLeft ? "end" : "start")
+        .attr("dominant-baseline", "central")
+        .attr("font-size", "11px")
+        .attr("font-weight", "700")
+        .attr("fill", highlightColor)
+        .attr("font-family", FONT)
+        .text(finalScore != null ? finalScore.toFixed(2) : bestProg.score.toFixed(2));
+    }
+
+    // Tooltip
+    pointsG.selectAll("path")
+      .on("mouseenter", (event, d) => {
+        if (!d) return;
+        tooltip.html(
+          `<div class="tt-label" style="color:${d.color}">${d.label} \u2014 ${d.name}</div>` +
+          `<div class="tt-row">Score: <b>${d.score.toFixed(4)}</b></div>`
+        ).style("opacity", 1)
+          .style("left", (event.offsetX + 14) + "px")
+          .style("top", (event.offsetY - 10) + "px");
+      })
+      .on("mousemove", event => {
+        tooltip.style("left", (event.offsetX + 14) + "px")
+          .style("top", (event.offsetY - 10) + "px");
+      })
+      .on("mouseleave", () => { tooltip.style("opacity", 0); });
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Left top: LoCoMo (population search)
+  // ════════════════════════════════════════════════════════════════════════
+  drawHighlightPanel(
+    svg.append("g").attr("transform", `translate(0,${leftPlotTop})`),
+    leftW, leftPanelH, "LoCoMo", PALETTE["LoCoMo"],
+    "(a) Population Search (LoCoMo)", "left", 0.408
+  );
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Left bottom: LoCoMo-Linear (linear search)
+  // ════════════════════════════════════════════════════════════════════════
+  drawHighlightPanel(
+    svg.append("g").attr("transform", `translate(0,${leftPlotTop + leftPanelH + leftGap})`),
+    leftW, leftPanelH, "LoCoMo-Linear", PALETTE["LoCoMo-Linear"],
+    "(b) Linear Search (LoCoMo)", "right", 0.381
+  );
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Right: full scatter (square, no edges) + zones + legend
+  // ════════════════════════════════════════════════════════════════════════
+  const rightG = svg.append("g").attr("transform", `translate(${centerX},0)`);
+  const rm = mainMargin;
+
+  const x = d3.scaleLinear().domain(xDomain).range([0, plotSize]);
+  const y = d3.scaleLinear().domain(yDomain).range([plotSize, 0]);
+
+  const g = rightG.append("g").attr("transform", `translate(${rm.left},${rm.top})`);
+
+  // Grid + frame (no ticks/labels — t-SNE values are meaningless)
+  const xTicks = x.ticks(12), yTicks = y.ticks(12);
+  const gridG = g.append("g");
+  xTicks.forEach(t => {
+    gridG.append("line").attr("x1", x(t)).attr("x2", x(t))
+      .attr("y1", 0).attr("y2", plotSize).attr("stroke", "#e8e8e8").attr("stroke-width", 0.5);
+  });
+  yTicks.forEach(t => {
+    gridG.append("line").attr("x1", 0).attr("x2", plotSize)
+      .attr("y1", y(t)).attr("y2", y(t)).attr("stroke", "#e8e8e8").attr("stroke-width", 0.5);
+  });
+  g.append("rect").attr("width", plotSize).attr("height", plotSize)
+    .attr("fill", "none").attr("stroke", "#333").attr("stroke-width", 0.8);
+
+  // Zone ellipses (from editor-defined geometry, no computation)
+  const zoneG = g.append("g");
+  const zoneGeom = [];  // collect for annotation arcs
+  ZONES.forEach(zone => {
+    const cx = zone.ecx, cy = zone.ecy;
+    const rw = zone.erx, rh = zone.ery;
+    const angle = zone.eangle || 0;
+
+    zoneG.append("ellipse").attr("cx", cx).attr("cy", cy).attr("rx", rw).attr("ry", rh)
+      .attr("transform", `rotate(${angle},${cx},${cy})`)
+      .attr("fill", "none").attr("stroke", zone.color)
+      .attr("stroke-width", 0.9).attr("stroke-dasharray", "5,3").attr("opacity", 0.55);
+
+    // Save geometry in global SVG coords for annotation arcs
+    const gx = centerX + rm.left + cx;
+    const gy = rm.top + cy;
+    // Anchor point in global coords (if defined)
+    const gAnchorX = zone.anchorX != null ? centerX + rm.left + zone.anchorX : gx + rw * 0.5;
+    const gAnchorY = zone.anchorY != null ? rm.top + zone.anchorY : gy;
+    zoneGeom.push({ ...zone, cx: gx, cy: gy, rw, rh, angle, gAnchorX, gAnchorY });
+  });
+
+  // Points (no edges — pure scatter, shape = archetype)
+  const mainSymStar = d3.symbol().type(d3.symbolStar).size(115);
+
+  const labelOrder = [];
+  const seenLabels = new Set();
+  programs.forEach(p => {
+    if (p.label === "Seed" && !seenLabels.has("Seed")) { labelOrder.push("Seed"); seenLabels.add("Seed"); }
+  });
+  programs.forEach(p => {
+    if (!seenLabels.has(p.label)) { labelOrder.push(p.label); seenLabels.add(p.label); }
+  });
+
+  const pointsG = g.append("g");
+  labelOrder.forEach(label => {
+    const group = programs.filter(p => p.label === label);
+    const color = group[0].color;
+
+    group.filter(p => p.is_seed).forEach(p => {
+      pointsG.append("path").datum(p).attr("d", seedPath)
+        .attr("transform", `translate(${x(p.x)},${y(p.y)})`)
+        .attr("fill", color).attr("fill-opacity", 0.85)
+        .attr("stroke", "#333").attr("stroke-width", 0.5);
+    });
+    group.filter(p => !p.is_seed && !p.is_best).forEach(p => {
+      const m = MARKERS[p.archetype] || MARKERS["Vector+LLM"];
+      const d = m.gen.size(m.size)();
+      const rot = m.rotate ? ` rotate(${m.rotate})` : "";
+      pointsG.append("path").datum(p).attr("d", d)
+        .attr("transform", `translate(${x(p.x)},${y(p.y)})${rot}`)
+        .attr("fill", color).attr("fill-opacity", 0.7)
+        .attr("stroke", "#fff").attr("stroke-width", 0.3);
+    });
+    group.filter(p => p.is_best).forEach(p => {
+      pointsG.append("path").datum(p).attr("d", mainSymStar)
+        .attr("transform", `translate(${x(p.x)},${y(p.y)})`)
+        .attr("fill", color).attr("fill-opacity", 1)
+        .attr("stroke", "#222").attr("stroke-width", 0.6);
+    });
+  });
+
+  // Tooltip
+  pointsG.selectAll("path")
+    .on("mouseenter", (event, d) => {
+      if (!d) return;
+      const f = d.features || {};
+      const lines = [
+        `<div class="tt-label" style="color:${d.color}">${d.label} \u2014 ${d.name}</div>`,
+        `<div class="tt-row">Score: <b>${d.score.toFixed(4)}</b></div>`,
+        `<div class="tt-row">LOC: ${f.loc || "\u2014"}  |  Funcs: ${f.n_functions || "\u2014"}</div>`,
+        `<div class="tt-row">SQLite: ${f.uses_sqlite3 ? "Yes" : "No"}  |  Chroma: ${f.uses_chromadb ? "Yes" : "No"}  |  LLM-read: ${f.llm_in_read ? "Yes" : "No"}</div>`,
+      ];
+      if (d.is_seed) lines[0] = `<div class="tt-label" style="color:${d.color}">Seed \u2014 ${d.name}</div>`;
+      if (d.is_best) lines.splice(1, 0, `<div class="tt-row" style="color:#d62728;font-weight:600">\u2605 Best program</div>`);
+      tooltip.html(lines.join(""))
+        .style("opacity", 1)
+        .style("left", (event.offsetX + 14) + "px")
+        .style("top", (event.offsetY - 10) + "px");
+    })
+    .on("mousemove", event => {
+      tooltip.style("left", (event.offsetX + 14) + "px")
+        .style("top", (event.offsetY - 10) + "px");
+    })
+    .on("mouseleave", () => { tooltip.style("opacity", 0); });
+
+  // Panel label (below)
+  g.append("text").attr("x", plotSize / 2).attr("y", plotSize + 14)
+    .attr("text-anchor", "middle").attr("font-size", "10px").attr("font-weight", "600")
+    .attr("fill", "#333").attr("font-family", FONT).text("(c) All Programs");
+
+  // Legend — single narrow column: datasets → archetypes → seed/best
+  const lh = 12;
+  const datasetLabels = labelOrder.filter(l => l !== "Seed");
+  const archetypeOrder = ["Vector+LLM", "Vector-only", "SQL+Vector", "SQL-only", "LLM-centric"];
+  const sepH = 6;  // separator spacing
+
+  // Count total rows
+  const totalRows = 1 + datasetLabels.length + 1 + archetypeOrder.length + 1 + 2; // headers + items + seed/best
+  const legendH = totalRows * lh + sepH * 2 + 6;
+  const legendW = 88;
+  const legendX = 12, legendY = plotSize - legendH + 2;
+  const legendG = g.append("g").attr("transform", `translate(${legendX},${legendY})`);
+  const legendBg = legendG.append("rect").attr("x", -6).attr("y", -5)
+    .attr("fill", "rgba(255,255,255,0.92)").attr("stroke", "none")
+    .attr("width", legendW + 8).attr("height", legendH);
+
+  let ly = 0;
+
+  // Section: Dataset
+  legendG.append("text").attr("x", 0).attr("y", ly + 3)
+    .attr("dominant-baseline", "central").attr("font-size", "6.5px").attr("fill", "#999")
+    .attr("font-weight", "600").attr("font-family", FONT).text("DATASET");
+  ly += lh;
+  datasetLabels.forEach(label => {
+    const color = PALETTE[label];
+    legendG.append("circle").attr("cx", 3).attr("cy", ly + 3).attr("r", 2.5)
+      .attr("fill", color).attr("fill-opacity", 0.7).attr("stroke", "#fff").attr("stroke-width", 0.3);
+    legendG.append("text").attr("x", 11).attr("y", ly + 3)
+      .attr("dominant-baseline", "central").attr("font-size", "7px").attr("fill", "#333")
+      .attr("font-family", FONT).text(label);
+    ly += lh;
+  });
+
+  // Separator
+  ly += 2;
+  legendG.append("line").attr("x1", -2).attr("x2", legendW - 2).attr("y1", ly).attr("y2", ly)
+    .attr("stroke", "#ddd").attr("stroke-width", 0.5);
+  ly += sepH;
+
+  // Section: Architecture (marker shapes)
+  legendG.append("text").attr("x", 0).attr("y", ly + 3)
+    .attr("dominant-baseline", "central").attr("font-size", "6.5px").attr("fill", "#999")
+    .attr("font-weight", "600").attr("font-family", FONT).text("ARCHITECTURE");
+  ly += lh;
+  archetypeOrder.forEach(arch => {
+    const m = MARKERS[arch];
+    const d = m.gen.size(m.size * 0.7)();
+    const rot = m.rotate ? ` rotate(${m.rotate})` : "";
+    legendG.append("path").attr("d", d)
+      .attr("transform", `translate(3,${ly + 3})${rot}`)
+      .attr("fill", "#555").attr("stroke", "#fff").attr("stroke-width", 0.3);
+    legendG.append("text").attr("x", 11).attr("y", ly + 3)
+      .attr("dominant-baseline", "central").attr("font-size", "7px").attr("fill", "#333")
+      .attr("font-family", FONT).text(arch);
+    ly += lh;
+  });
+
+  // Separator
+  ly += 2;
+  legendG.append("line").attr("x1", -2).attr("x2", legendW - 2).attr("y1", ly).attr("y2", ly)
+    .attr("stroke", "#ddd").attr("stroke-width", 0.5);
+  ly += sepH;
+
+  // Seed + Best
+  const ls = 3;
+  legendG.append("path")
+    .attr("d", `M0,${-ls} L${ls},0 L0,${ls} L${-ls},0 Z`)
+    .attr("transform", `translate(3,${ly + 3})`)
+    .attr("fill", "#7f7f7f").attr("stroke", "#333").attr("stroke-width", 0.4);
+  legendG.append("text").attr("x", 11).attr("y", ly + 3)
+    .attr("dominant-baseline", "central").attr("font-size", "7px").attr("fill", "#333")
+    .attr("font-family", FONT).text("Seed");
+  ly += lh;
+  legendG.append("path").attr("d", d3.symbol().type(d3.symbolStar).size(35)())
+    .attr("transform", `translate(3,${ly + 3})`).attr("fill", "#333")
+    .attr("stroke", "#222").attr("stroke-width", 0.4);
+  legendG.append("text").attr("x", 11).attr("y", ly + 3)
+    .attr("dominant-baseline", "central").attr("font-size", "7px").attr("fill", "#333")
+    .attr("font-family", FONT).text("Best");
+  ly += lh;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Right annotation panel: zone descriptions with background boxes + arcs
+  // ════════════════════════════════════════════════════════════════════════
+  const annotX = centerX + centerW + gap;
+  const annotG = svg.append("g").attr("transform", `translate(${annotX},0)`);
+
+  // Sort zones top-to-bottom by their ellipse center y
+  const sortedZones = [...zoneGeom].sort((a, b) => a.cy - b.cy);
+
+  const boxW = annotW - 8;
+  const boxPadX = 6, boxPadY = 5;
+  const lineH = 12;  // line height for wrapped text
+  const nSlots = sortedZones.length;
+
+  // Simple word-wrap helper: split text into lines of maxChars
+  function wrapText(text, maxChars) {
+    const words = text.split(" ");
+    const lines = [];
+    let cur = "";
+    words.forEach(w => {
+      if (cur && (cur + " " + w).length > maxChars) {
+        lines.push(cur);
+        cur = w;
+      } else {
+        cur = cur ? cur + " " + w : w;
+      }
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  // Pre-compute box heights to distribute slots evenly
+  const boxData = sortedZones.map(zone => {
+    const subLines = wrapText(zone.sub, 20);
+    const boxH = boxPadY * 2 + 15 + subLines.length * lineH;
+    return { zone, subLines, boxH };
+  });
+
+  const totalBoxH = boxData.reduce((s, b) => s + b.boxH, 0);
+  const slotTop = mainMargin.top;
+  const slotBottom = mainMargin.top + plotSize;
+  const availH = slotBottom - slotTop;
+  const boxGap = (availH - totalBoxH) / (nSlots - 1);
+
+  let curY = slotTop;
+  boxData.forEach(({ zone, subLines, boxH }) => {
+    const bx = 4;  // box x within annotation panel
+
+    // Background box with colored border
+    annotG.append("rect")
+      .attr("x", bx).attr("y", curY)
+      .attr("width", boxW).attr("height", boxH)
+      .attr("fill", "#fafafa")
+      .attr("stroke", zone.color)
+      .attr("stroke-width", 0.8)
+      .attr("opacity", 0.95)
+      .attr("rx", 0);
+    // Thick colored left accent bar (drawn on top)
+    annotG.append("rect")
+      .attr("x", bx).attr("y", curY + 1)
+      .attr("width", 3).attr("height", boxH - 2)
+      .attr("fill", zone.color)
+      .attr("opacity", 0.85);
+
+    // Title
+    annotG.append("text")
+      .attr("x", bx + boxPadX + 2).attr("y", curY + boxPadY + 9)
+      .attr("font-size", "10px")
+      .attr("font-weight", "700")
+      .attr("fill", zone.color)
+      .attr("font-family", FONT)
+      .text(zone.main);
+
+    // Wrapped description
+    subLines.forEach((line, j) => {
+      annotG.append("text")
+        .attr("x", bx + boxPadX + 2).attr("y", curY + boxPadY + 11 + 14 + j * lineH)
+        .attr("font-size", "8.5px")
+        .attr("fill", "#555")
+        .attr("font-family", FONT)
+        .text(line);
+    });
+
+    // Curved arc: anchor point → annotation box (tapered)
+    const tgtX = annotX + bx;
+    const tgtY = curY + boxH / 2;
+    const srcX = zone.gAnchorX;
+    const srcY = zone.gAnchorY;
+
+    const midX = (srcX + tgtX) / 2;
+    const cp1X = srcX + (midX - srcX) * 0.8;
+    const cp1Y = srcY;
+    const cp2X = tgtX - (tgtX - midX) * 0.8;
+    const cp2Y = tgtY;
+
+    // Tapered connector: thin at ellipse (src), wide at panel (tgt)
+    const startW = 0.3;  // half-width at ellipse anchor
+    const endW = 3;      // half-width at panel
+    // Compute tangent at start and end to get perpendicular offsets
+    // At t=0, tangent ≈ (cp1X-srcX, cp1Y-srcY)
+    const t0dx = cp1X - srcX, t0dy = cp1Y - srcY;
+    const t0len = Math.sqrt(t0dx*t0dx + t0dy*t0dy) || 1;
+    const t0nx = -t0dy/t0len, t0ny = t0dx/t0len;  // perpendicular
+    // At t=1, tangent ≈ (tgtX-cp2X, tgtY-cp2Y)
+    const t1dx = tgtX - cp2X, t1dy = tgtY - cp2Y;
+    const t1len = Math.sqrt(t1dx*t1dx + t1dy*t1dy) || 1;
+    const t1nx = -t1dy/t1len, t1ny = t1dx/t1len;
+
+    // Upper edge
+    const uSrcX = srcX + t0nx*startW, uSrcY = srcY + t0ny*startW;
+    const uTgtX = tgtX + t1nx*endW, uTgtY = tgtY + t1ny*endW;
+    const uCp1X = cp1X + t0nx*startW*0.7, uCp1Y = cp1Y + t0ny*startW*0.7;
+    const uCp2X = cp2X + t1nx*endW*0.7, uCp2Y = cp2Y + t1ny*endW*0.7;
+    // Lower edge (reversed)
+    const lSrcX = srcX - t0nx*startW, lSrcY = srcY - t0ny*startW;
+    const lTgtX = tgtX - t1nx*endW, lTgtY = tgtY - t1ny*endW;
+    const lCp1X = cp1X - t0nx*startW*0.7, lCp1Y = cp1Y - t0ny*startW*0.7;
+    const lCp2X = cp2X - t1nx*endW*0.7, lCp2Y = cp2Y - t1ny*endW*0.7;
+
+    svg.append("path")
+      .attr("d", `M${uSrcX},${uSrcY} C${uCp1X},${uCp1Y} ${uCp2X},${uCp2Y} ${uTgtX},${uTgtY}` +
+                 `L${lTgtX},${lTgtY} C${lCp2X},${lCp2Y} ${lCp1X},${lCp1Y} ${lSrcX},${lSrcY} Z`)
+      .attr("fill", zone.color)
+      .attr("fill-opacity", 0.25)
+      .attr("stroke", "none");
+
+    curY += boxH + boxGap;
+  });
+
+}).catch(err => {
+  document.body.innerHTML = `<pre style="color:red;padding:2em">Error loading fig5_data.json:\n${err}\n\nServe with: cd paper/figures/landscape && python -m http.server 8080</pre>`;
+});
+</script>
+</body>
+</html>

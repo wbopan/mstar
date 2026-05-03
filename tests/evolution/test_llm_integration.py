@@ -12,9 +12,9 @@ import litellm
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from programmaticmemory.evolution.evaluator import MEMORY_READ_MAX_CHARS, MemoryEvaluator, _parse_json_from_llm
-from programmaticmemory.evolution.patcher import apply_patch
-from programmaticmemory.evolution.prompts import (
+from mstar.evolution.evaluator import MEMORY_READ_MAX_CHARS, MemoryEvaluator, _parse_json_from_llm
+from mstar.evolution.patcher import apply_patch
+from mstar.evolution.prompts import (
     INITIAL_KB_PROGRAM,
     build_compile_fix_prompt,
     build_knowledge_item_generation_prompt,
@@ -23,15 +23,15 @@ from programmaticmemory.evolution.prompts import (
     build_reflection_user_prompt,
     build_retrieved_memory_prompt,
 )
-from programmaticmemory.evolution.reflector import Reflector, _extract_commit_message, _extract_patch
-from programmaticmemory.evolution.sandbox import (
+from mstar.evolution.reflector import Reflector, _extract_commit_message, _extract_patch
+from mstar.evolution.sandbox import (
     CompiledProgram,
     CompileError,
     compile_kb_program,
     extract_dataclass_schema,
 )
-from programmaticmemory.evolution.toolkit import Toolkit, ToolkitConfig
-from programmaticmemory.evolution.types import DataItem, KBProgram
+from mstar.evolution.toolkit import Toolkit, ToolkitConfig
+from mstar.evolution.types import DataItem, KBProgram
 
 MODEL = "openrouter/deepseek/deepseek-v3.2"
 REFLECT_MODEL = "openrouter/openai/gpt-5.3-codex"
@@ -483,7 +483,7 @@ class KnowledgeBase:
 @pytest.mark.llm
 def test_compile_fix_disallowed_import(snapshot: SnapshotAssertion):
     """Compile error (disallowed import) → detected → LLM fixes → compiles and passes smoke test."""
-    from programmaticmemory.evolution.sandbox import smoke_test
+    from mstar.evolution.sandbox import smoke_test
 
     # Step 1: Verify the program is broken
     compile_result = compile_kb_program(PROGRAM_WITH_DISALLOWED_IMPORT)
@@ -520,7 +520,7 @@ def test_compile_fix_disallowed_import(snapshot: SnapshotAssertion):
 @pytest.mark.llm
 def test_compile_fix_runtime_bug(snapshot: SnapshotAssertion):
     """Runtime bug (NameError in write) → detected by smoke test → LLM fixes → passes."""
-    from programmaticmemory.evolution.sandbox import smoke_test
+    from mstar.evolution.sandbox import smoke_test
 
     # Step 1: Program compiles but fails smoke test
     compile_result = compile_kb_program(PROGRAM_WITH_RUNTIME_BUG)
@@ -880,7 +880,7 @@ def test_patch_format_recovery(snapshot: SnapshotAssertion):
     from unittest.mock import MagicMock
     from unittest.mock import patch as mock_patch
 
-    from programmaticmemory.evolution.types import EvalResult, FailedCase
+    from mstar.evolution.types import EvalResult, FailedCase
 
     program = KBProgram(source_code=INITIAL_KB_PROGRAM)
     eval_result = EvalResult(
