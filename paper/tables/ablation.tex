@@ -1,6 +1,6 @@
 % Table 2: Ablation study on LoCoMo
 \begin{wraptable}{r}{0.44\textwidth}
-    % \vspace{-1.2em}
+    \vspace{-1em}
     \centering
     \footnotesize
     \caption{\textbf{Ablation study on LoCoMo.}
@@ -8,18 +8,18 @@
     $\Delta$ reports absolute change from the full system.}
     % \vspace{-0.5em}
     \label{tab:ablation}
-    \begin{tabular}{@{}lcc@{}}
+    \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}Xcc@{}}
         \toprule
         \rowcolor{gray!10}
         \textbf{Variant} & \textbf{F1} & \textbf{$\Delta$} \\
         \midrule
         \rowcolor{green!10}
         \sysname{}                           & 0.459  & ---      \\
-        \quad $-$ Instruction                 & 0.353  & $-$0.106 \\
-        \quad $-$ Code                        & 0.256  & $-$0.203 \\
-        \quad Max parent selection          & 0.381  & $-$0.078 \\
-        \quad $-$ Diversity                   & 0.318  & $-$0.141 \\
+        \quad \textit{$-$\,Instruction}       & 0.353  & $-$0.106 \\
+        \quad \textit{$-$\,Code}              & 0.256  & $-$0.203 \\
+        \quad \textit{Max parent selection}   & 0.381  & $-$0.078 \\
+        \quad \textit{$-$\,Diversity}         & 0.318  & $-$0.141 \\
         \bottomrule
-    \end{tabular}%
+    \end{tabularx}%
     \vspace{-1em}
 \end{wraptable}

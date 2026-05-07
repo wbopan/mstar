@@ -98,8 +98,7 @@
 
 \begin{algorithm}[!htbp]
 \caption{\textbf{Reflective code evolution for memory-program search.}
-The left panel gives the population-based evolution loop, and the right panel gives split evaluation for a candidate program.
-\rev{Revised in this version: (a) adds an explicit guard so discarded mutations skip evaluation and pool insertion; (b) replaces the abbreviated $P.\textsc{Instr}_*$ with the full \textsc{Instruction} constants and the explicit \textsc{KnowledgeBase} constructor, and routes failed/successful samples by an explicit threshold $\theta$.}}
+The left panel gives the population-based evolution loop, and the right panel gives split evaluation for a candidate program.}
 \label{alg:evolution}
 \begin{minipage}[t]{0.47\linewidth}
 \textbf{(a) Evolution Loop} \label{alg:evolution-loop}
@@ -271,7 +270,7 @@ The second variant adds a vector database to GEPA because the original GEPA setu
 \label{app:cost}
 
 \autoref{tab:cost} reports the computational cost of running \sysname{} evolution and baselines across all benchmarks.
-We break down API calls by role: the \emph{task agent} (knowledge extraction, query generation, and answer generation), the \emph{reflector} (code mutation via LLM reflection), the \emph{judge} (per-criterion rubric scoring for HealthBench and PRBench), and the \emph{toolkit} \rev{(any LLM call issued from inside the memory pipeline at write or read time, including evolved \texttt{write()}/\texttt{read()} methods, baseline retrieval steps, and embedding-driven preprocessing helpers)}.
+We break down API calls by role: the \emph{task agent} (knowledge extraction, query generation, and answer generation), the \emph{reflector} (code mutation via LLM reflection), the \emph{judge} (per-criterion rubric scoring for HealthBench and PRBench), and the \emph{toolkit} (any LLM call issued from inside the memory pipeline at write or read time, including evolved \texttt{write()}/\texttt{read()} methods, baseline retrieval steps, and embedding-driven preprocessing helpers).
 All experiments use \texttt{gpt-5.4-mini} as the task agent, judge, and toolkit model, and \texttt{gpt-5.3-codex} as the reflector model~\citep{openai2026gpt54mini,openai2026gpt53codex}.
 Cost estimates use Azure OpenAI pricing: \$0.75/\$4.50 per 1M input/output tokens for \texttt{gpt-5.4-mini}, and \$1.75/\$14.00 per 1M input/output tokens for \texttt{gpt-5.3-codex}~\citep{openai2026gpt54mini,openai2026gpt53codex}.
 Note that \texttt{gpt-5.3-codex} is a reasoning model; its output token counts include internal reasoning tokens, which are billed at the same rate as visible output tokens when computing the estimates below.
@@ -356,7 +355,7 @@ Rows list shared settings and benchmark-specific ranges used in the main experim
 \midrule
 Evolution iterations         & 20 \\
 Population seed programs     & 3 \\
-Selection strategy           & Softmax ($\rev{\tau}{=}0.15$) \\
+Selection strategy           & Softmax ($\tau=0.15$) \\
 Static validation subset     & 32--60 items ($k$-means clustering) \\
 Rotating validation subset   & 5 items per iteration \\
 Train-to-validation ratio    & 2 (train episodes = $2 \times$ validation items) \\
@@ -374,11 +373,11 @@ LLM retry attempts           & 3 (exponential backoff) \\
 \subsection{Representative Subset Selection}
 \label{app:representative-subset}
 
-\rev{We construct representative subsets to reduce evaluation cost while preserving coverage of the full validation set.
+We construct representative subsets to reduce evaluation cost while preserving coverage of the full validation set.
 For the static validation subset, we embed all validation samples, cluster them into $n$ groups using $k$-means~\citep{macqueen1967kmeans} with a fixed seed, and select the sample closest to each cluster centroid to form the fixed static validation set.
 This procedure covers diverse regions of the validation distribution more effectively than random sampling under the same evaluation budget.
 For the rotating validation subset used as reflection context, we re-cluster the remaining validation pool at each iteration with a different $k$-means seed (the iteration index added to a base seed), and select the sample closest to each new cluster centroid; varying the seed perturbs the cluster boundaries, so the chosen samples differ across iterations even though both clustering and centroid selection are deterministic given a seed.
-The static subset determines fitness, while the rotating subset supplies diverse examples for mutation.}
+The static subset determines fitness, while the rotating subset supplies diverse examples for mutation.
 
 For episode subset selection, we use a facility-location objective to select $M$ training episodes that are relevant to the validation samples~\citep{nemhauser1978submodular}.
 Given validation samples $V$ and candidate episodes $E$, we select a subset $S \subseteq E$ of size $M$ to maximize:
@@ -871,7 +870,6 @@ Rules:
 
 \paragraph{Main reflection prompt.}
 The following is the complete prompt template sent to the reflector LLM for each mutation step in evolution.
-\rev{Rule 3 in this version corrects the previously printed signature to include the \texttt{raw\_text} parameter that \texttt{write()} actually receives.}
 
 \begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
 You are an expert Python programmer specializing in knowledge base
@@ -1038,10 +1036,10 @@ F_1 = \frac{2 \cdot |\text{out} \cap \text{exp}|}{|\text{out}| + |\text{exp}|}.
 \end{equation}
 If both token sets are empty, the score is 1.0; if exactly one is empty, the score is 0.0.
 
-\rev{\paragraph{LLM-Judge Score (LoCoMo).}
+\paragraph{LLM-Judge Score (LoCoMo).}
 The L-J column in Table~\ref{tab:main-results} reports a complementary LLM-as-judge metric that allows for paraphrastic answers that token F1 would penalize.
 A separate judge call grades each prediction against the gold answer and returns a binary correctness label, which we then average over the test set.
-The judge uses the same task agent model (GPT-5.4-mini) and the prompt template below; the score is $1.0$ if the response parses as the integer $1$ and $0.0$ otherwise.}
+The judge uses the same task agent model (GPT-5.4-mini) and the prompt template below; the score is $1.0$ if the response parses as the integer $1$ and $0.0$ otherwise.
 \begin{lstlisting}[style=evolvedcode, basicstyle=\ttfamily\scriptsize]
 You are a strict judge. Determine if the output answers the question
 correctly based on the expected answer. Reply ONLY with 1 (correct)
@@ -1152,15 +1150,15 @@ Best per column appears in \textbf{bold} for each reported task category.}
 & \textbf{Simple} & \textbf{Clean} & \textbf{Light} & \textbf{Cool} & \textbf{Heat} & \textbf{2-Obj} & \textbf{Overall} \\
 & \footnotesize$(n{=}2)$ & \footnotesize$(n{=}12)$ & \footnotesize$(n{=}2)$ & \footnotesize$(n{=}8)$ & \footnotesize$(n{=}7)$ & \footnotesize$(n{=}15)$ & \footnotesize$(n{=}50)$ \\
 \midrule
-No Memory            & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.50 & 0.43 & 0.87 & \rev{0.640} \\
-Vector Search        & \textbf{1.00} & 0.42 & \textbf{1.00} & \textbf{1.00} & 0.29 & 0.87 & \rev{0.720} \\
-G-Memory             & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.12 & 0.29 & 0.87 & \rev{0.560} \\
-Mem0                 & \textbf{1.00} & 0.25 & \textbf{1.00} & 0.62 & 0.43 & 0.87 & \rev{0.640} \\
-Trajectory Retrieval & \textbf{1.00} & 0.58 & \textbf{1.00} & 0.88 & 0.43 & \textbf{0.93} & \rev{0.780} \\
-ReasoningBank        & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.25 & 0.43 & 0.80 & \rev{0.580} \\
-Dynamic Cheatsheet   & \textbf{1.00} & 0.17 & \textbf{1.00} & 0.38 & 0.00 & 0.73 & \rev{0.480} \\
-GEPA                 & \textbf{1.00} & 0.50 & \textbf{1.00} & 0.88 & 0.43 & 0.80 & \rev{0.720} \\
-GEPA + Vector Search & \textbf{1.00} & \textbf{0.92} & \textbf{1.00} & \textbf{1.00} & 0.29 & 0.80 & \rev{\textbf{0.820}} \\
+No Memory            & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.50 & 0.43 & 0.87 & 0.640 \\
+Vector Search        & \textbf{1.00} & 0.42 & \textbf{1.00} & \textbf{1.00} & 0.29 & 0.87 & 0.720 \\
+G-Memory             & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.12 & 0.29 & 0.87 & 0.560 \\
+Mem0                 & \textbf{1.00} & 0.25 & \textbf{1.00} & 0.62 & 0.43 & 0.87 & 0.640 \\
+Trajectory Retrieval & \textbf{1.00} & 0.58 & \textbf{1.00} & 0.88 & 0.43 & \textbf{0.93} & 0.780 \\
+ReasoningBank        & \textbf{1.00} & 0.33 & \textbf{1.00} & 0.25 & 0.43 & 0.80 & 0.580 \\
+Dynamic Cheatsheet   & \textbf{1.00} & 0.17 & \textbf{1.00} & 0.38 & 0.00 & 0.73 & 0.480 \\
+GEPA                 & \textbf{1.00} & 0.50 & \textbf{1.00} & 0.88 & 0.43 & 0.80 & 0.720 \\
+GEPA + Vector Search & \textbf{1.00} & \textbf{0.92} & \textbf{1.00} & \textbf{1.00} & 0.29 & 0.80 & \textbf{0.820} \\
 \rowcolor{green!10}
 \sysname{}           & \textbf{1.00} & 0.42 & \textbf{1.00} & 0.75 & \textbf{0.57} & 0.80 & 0.700 \\
 \bottomrule
@@ -1183,15 +1181,15 @@ Best per column appears in \textbf{bold} for each reported question category.}
 & \textbf{Single-hop} & \textbf{Temporal} & \textbf{Causal} & \textbf{Open-domain} & \textbf{Overall} \\
 & \footnotesize$(n{=}18)$ & \footnotesize$(n{=}18)$ & \footnotesize$(n{=}9)$ & \footnotesize$(n{=}55)$ & \\
 \midrule
-No Memory            & 0.02 & 0.00 & 0.11 & 0.04 & \rev{0.036} \\
-Vector Search        & 0.19 & 0.29 & 0.38 & 0.25 & \rev{0.256} \\
-G-Memory             & 0.23 & 0.12 & 0.31 & 0.24 & \rev{0.224} \\
-Mem0                 & \textbf{0.33} & 0.26 & 0.37 & 0.43 & \rev{0.373} \\
-Trajectory Retrieval & 0.18 & \textbf{0.33} & 0.34 & 0.28 & \rev{0.276} \\
-ReasoningBank        & 0.25 & 0.07 & 0.34 & 0.19 & \rev{0.194} \\
-Dynamic Cheatsheet   & 0.14 & 0.00 & 0.22 & 0.14 & \rev{0.124} \\
-GEPA                 & 0.09 & 0.06 & 0.24 & 0.15 & \rev{0.132} \\
-GEPA + Vector Search & 0.16 & \textbf{0.38} & \textbf{0.39} & 0.31 & \rev{0.300} \\
+No Memory            & 0.02 & 0.00 & 0.11 & 0.04 & 0.036 \\
+Vector Search        & 0.19 & 0.29 & 0.38 & 0.25 & 0.256 \\
+G-Memory             & 0.23 & 0.12 & 0.31 & 0.24 & 0.224 \\
+Mem0                 & \textbf{0.33} & 0.26 & 0.37 & 0.43 & 0.373 \\
+Trajectory Retrieval & 0.18 & \textbf{0.33} & 0.34 & 0.28 & 0.276 \\
+ReasoningBank        & 0.25 & 0.07 & 0.34 & 0.19 & 0.194 \\
+Dynamic Cheatsheet   & 0.14 & 0.00 & 0.22 & 0.14 & 0.124 \\
+GEPA                 & 0.09 & 0.06 & 0.24 & 0.15 & 0.132 \\
+GEPA + Vector Search & 0.16 & \textbf{0.38} & \textbf{0.39} & 0.31 & 0.300 \\
 \rowcolor{green!10}
 \sysname{}           & \textbf{0.33} & 0.19 & 0.35 & \textbf{0.51} & \textbf{0.459} \\
 \bottomrule
@@ -1226,7 +1224,7 @@ Best Baseline denotes the strongest fixed baseline.}
 \cmidrule(r){2-6}
 \textbf{Benchmark} & \textbf{0} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{Mean} & \textbf{$\pm$Std} & \textbf{CV} & \textbf{Best Baseline} \\
 \midrule
-LoCoMo     & \rev{0.459} & 0.463 & 0.364 & 0.394 & 0.423 & \rev{0.421} & \rev{0.042} & \rev{10.0\%} & 0.373 \\
+LoCoMo     & 0.459 & 0.463 & 0.364 & 0.394 & 0.423 & 0.421 & 0.042 & 10.0\% & 0.373 \\
 HB-Data    & 0.390 & 0.382 & 0.357 & 0.411 & 0.413 & 0.391 & 0.023 & 5.9\% & 0.327 \\
 PR-Finance & 0.586 & 0.544 & 0.582 & 0.582 & 0.513 & 0.561 & 0.032 & 5.7\% & 0.449 \\
 \bottomrule
@@ -1264,13 +1262,13 @@ PR-Finance & 0.521 & 0.522 & 0.559 & 0.554 & 0.515 & 0.534 & 0.020 \\
 %  J. Limitations
 % ============================================================
 
-\rev{\section{Limitations}
+\section{Limitations}
 \label{app:limitations}
 
 \sysname{} has three main limitations.
 First, evaluating each candidate memory program requires re-ingesting episodes and re-scoring on the validation set, so the per-iteration cost grows with episode length and rubric complexity (Appendix~\ref{app:cost}); rubric-graded benchmarks reach \$90 and ALFWorld reaches 100 wall-clock hours per 20-iteration run.
 Second, our experiments use a fixed task agent and reflector model pair (GPT-5.4-mini and GPT-5.3-Codex); we have not measured how strongly the discovered programs depend on this choice.
-Third, evolution can drift toward task-specific heuristics encoded directly in the program logic (e.g., the synonym table in the ALFWorld action cache, Appendix~\ref{app:evolved-alfworld}), which improves in-task performance but limits transfer to other tasks (Figure~\ref{fig:task-optimized-memory}); designing search procedures that prefer reusable structure remains open.}
+Third, evolution can drift toward task-specific heuristics encoded directly in the program logic (e.g., the synonym table in the ALFWorld action cache, Appendix~\ref{app:evolved-alfworld}), which improves in-task performance but limits transfer to other tasks (Figure~\ref{fig:task-optimized-memory}); designing search procedures that prefer reusable structure remains open.
 
 \section{Broader Impact}
 \label{app:broader-impact}

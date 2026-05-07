@@ -12,12 +12,14 @@ We organize the analysis around three questions: whether memory-program search i
 \paragraph{Reflective code evolution progressively discovers better memory programs.}\looseness=-1
 Table~\ref{tab:main-results} shows that \sysname{} achieves the highest score on seven of eight reported metrics.
 Compared with the best baseline in each winning metric, the relative improvement is up to 31\%, with the largest gains on LoCoMo and PRBench.
-The strongest baseline changes across tasks.
-GEPA remains a strong baseline, especially on ALFWorld and PRBench.
-\sysname{} performs best on settings that require richer structured memory operations.
+The strongest baseline varies by task, indicating that existing memory methods have task-dependent strengths.
+GEPA is competitive on ALFWorld and PRBench, while Mem0, GEPA+Vector Search, and Dynamic Cheatsheet lead the baselines on LoCoMo and HealthBench.
+In comparison, \sysname{} achieves the best overall performance.
 This pattern suggests that executable code search reaches useful memory designs beyond the strongest fixed baselines.
-Figure~\ref{fig:evolution-trajectory} shows one ALFWorld evolution trajectory.
-In this run, early edits build a usable task-record schema, and later edits refine retrieval weights and action-selection checks.
+Figure~\ref{fig:evolution-trajectory} shows the ALFWorld evolution trajectory.
+The evolved memory program improves steadily over iterations, with the reflector producing task-specific changes at different stages of search.
+Early edits build a usable task-record schema that captures objects, locations, and state changes from demonstrations.
+Later edits refine retrieval weights and add action-selection checks, allowing the agent to retrieve more relevant trajectory patterns and choose actions more reliably.
 
 \paragraph{Different tasks produce structurally distinct optimal memory programs.}
 \input{tables/ablation}
@@ -28,7 +30,7 @@ To understand how \sysname{} adapts memory program structure to different tasks,
 For each task and iteration, we first sanitize the program by replacing strings and variable names with placeholders so that the embedding emphasizes structural differences.
 We then embed the sanitized programs with a code embedding model and project them with t-SNE~\citep{vandermaaten2008tsne}.
 The projection places the best programs for different benchmark configurations in separate regions, with markers indicating different storage architectures.
-The best ALFWorld program uses a compact SQLite action cache with read-time LLM synthesis.
+For example, the best ALFWorld program uses a compact SQLite action cache with read-time LLM synthesis.
 The best LoCoMo program uses ChromaDB semantic retrieval together with SQLite lexical and metadata scoring.
 Appendix~\ref{app:evolved-comparison} reports structural summaries, and the supplementary material includes full code for all best programs.
 
@@ -42,10 +44,10 @@ This pattern suggests that memory program structure should be optimized together
 
 \paragraph{Joint evolution of structure and policy enables task-specific adaptation.}
 Table~\ref{tab:ablation} isolates key design choices on LoCoMo.
-\rev{Each variant removes one component of \sysname{}: $-$\,Instruction lets only the code evolve and keeps the prompt instructions fixed; $-$\,Code does the opposite, evolving only the prompt instructions while keeping the code at the Vector Search seed; Max parent selection always picks the highest-scoring parent instead of sampling by softmax; and $-$\,Diversity drops the population pool and mutates only the current best program at each iteration.}
-Removing code evolution gives the largest drop, reducing F1 by 0.203.
-Removing Instruction optimization reduces F1 by 0.106.
-The full system also scores above variants that use max sampling or remove population diversity.
+Each variant removes one component of \sysname{}: \textit{$-$\,Instruction} lets only the code evolve and keeps the prompt instructions fixed; \textit{$-$\,Code} does the opposite, evolving only the prompt instructions while keeping the code at the Vector Search seed; \textit{Max parent selection} always picks the highest-scoring parent instead of sampling by softmax; and \textit{$-$\,Diversity} drops the population pool and mutates only the current best program at each iteration.
+\textit{$-$\,Code} gives the largest drop, reducing F1 by 0.203.
+\textit{$-$\,Instruction} reduces F1 by 0.106.
+The full system also scores above \textit{Max parent selection} and \textit{$-$\,Diversity}.
 These results indicate that joint optimization of program Logic and Instruction gives the strongest LoCoMo result.
 
 % === Table 2: Ablation ===

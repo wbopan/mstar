@@ -3,13 +3,13 @@
 \label{sec:experimental-setup}
 
 \looseness=-1
-We evaluate \sysname{} on four benchmark families with seven domain configurations, covering long-term conversational question answering, embodied household task completion, medical decision support, and professional legal and financial reasoning.
+We evaluate \sysname{} on four benchmark families with seven domain configurations, covering long-term conversational question answering, embodied task completion, medical question answering, and professional legal and financial reasoning.
 For each configuration, we run 20 evolution iterations, select the best memory program on validation, and report performance on a held-out test split.
 We use GPT-5.4 Mini as the task agent and GPT-5.3-Codex as the coding agent in reflective code evolution~\citep{openai2026gpt54mini,openai2026gpt53codex}.
 Additional dataset splits, hyperparameters, evaluation protocols, computational costs, and pseudocode are provided in Appendix~\ref{app:datasets}, Appendix~\ref{app:hyperparameters}, Appendix~\ref{app:eval-protocols}, Appendix~\ref{app:cost}, and Appendix~\ref{app:algorithm}.
 
 \noindent\textbf{Benchmarks.}
-We use \rev{LoCoMo~\citep{locomo}} to test long-term conversational memory, \rev{ALFWorld~\citep{alfworld}} to test memory use in embodied planning, \rev{HealthBench~\citep{healthbench}} to test rubric-graded health reasoning, and \rev{PRBench~\citep{prbench}} to test professional legal and financial reasoning.
+We use LoCoMo~\citep{locomo} to test long-term conversational memory, ALFWorld~\citep{alfworld} to test memory use in embodied planning, HealthBench~\citep{healthbench} to test rubric-graded health reasoning, and PRBench~\citep{prbench} to test professional legal and financial reasoning.
 Together, these benchmarks cover retrieval-heavy question answering, interactive decision making, and specialized reasoning under structured evaluation.
 Dataset construction details are provided in Appendix~\ref{app:datasets}, and metric details are provided in Appendix~\ref{app:eval-protocols} for all seven benchmark configurations.
 

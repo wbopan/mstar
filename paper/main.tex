@@ -162,10 +162,6 @@
 % Scaffold marker: writing agents replace \scaffold{} blocks with real text
 \newcommand{\scaffold}[1]{\begingroup\color{red}\textbf{[SCAFFOLD]} #1\endgroup}
 
-% Revision marker: wrap edited or newly added text for review.
-% Toggle to identity for camera-ready by redefining as \newcommand{\rev}[1]{#1}.
-\newcommand{\rev}[1]{\begingroup\color{red}#1\endgroup}
-
 % System name
 \newcommand{\sysname}{\textsc{Mstar}}
 % Second-best result highlighting
@@ -193,12 +189,12 @@
 \input{figures/overview/evolved_programs}
 
 \begin{abstract}
-Large language model agents rely on a memory harness to write, organize, retrieve, and use past experience.
-A harness that works for one task often fails on another, because conversations, embodied planning, and expert reasoning require different storage and retrieval behavior.
+Large Language Model (LLM) agents rely on a memory harness to write, organize, retrieve, and use past experience.
+A harness that works for one task often fails on another, because different tasks like conversations, embodied planning, or expert reasoning require different storage and retrieval behavior.
 To address this limitation, we introduce \sysname{}, a method that automatically discovers task-optimized memory programs through reflective code evolution.
-Specifically, \sysname{} operationalizes a memory harness as an executable Python memory program that defines the Schema, Logic, and Instruction, and optimizes these components jointly.
+Specifically, \sysname{} represents a memory harness as an executable Python program that defines the \textit{Schema}, \textit{Logic}, and \textit{Instruction} components, which are optimized jointly.
 We evaluate \sysname{} on four tasks covering conversation, embodied planning, and specialized reasoning.
-Our results demonstrate that \sysname{} improves performance over existing baselines across all evaluated tasks.
+Our results demonstrate that \sysname{} improves performance over existing static memory harnesses across all evaluated tasks.
 Furthermore, the evolved memory programs exhibit structurally distinct processing mechanisms for each evaluated domain.
 These findings suggest that every task benefits from its own memory harness, and that memory-program search provides a concrete way to discover it.
 \end{abstract}
@@ -207,22 +203,22 @@ These findings suggest that every task benefits from its own memory harness, and
 \section{Introduction}
 
 Agentic systems powered by large language models (LLMs) need a memory harness to reuse past experience across diverse tasks~\citep{zhang2024survey_memory,park2023generative,zhong2024memorybank,wang2024augmenting}.
-We use \textit{memory harness} to mean the components that store, organize, retrieve, and use this experience.
+We use \textit{memory harness} to refer to the components that store, organize, retrieve, and use this experience.
 As different task domains require knowledge in different structures, they call for different memory harnesses.
-For example, conversational agents need semantic maps of people, events, and preferences to remember user-specific facts (Figure~\ref{fig:system-overview}, top right)~\citep{locomo}, while embodied AI agents need reusable patterns from past trajectories to choose actions in new environments (Figure~\ref{fig:system-overview}, bottom left)~\citep{alfworld}, and specialized reasoning domains may need structured databases that track constraints, evidence, and decision criteria (Figure~\ref{fig:system-overview}, top left)~\citep{prbench}.
+For example, conversational agents need semantic maps of people, events, and preferences to remember user-specific facts (Figure~\ref{fig:system-overview}, top right)~\citep{locomo}, while embodied AI agents need reusable patterns from past trajectories to choose actions in new environments (Figure~\ref{fig:system-overview}, bottom left)~\citep{alfworld}, and specialized reasoning domains may need structured databases (Figure~\ref{fig:system-overview}, top left)~\citep{prbench}.
 These requirements encode different assumptions about what to store, how to organize it, and when to retrieve it.
 A harness built around one set of assumptions can therefore transfer poorly to another~\citep{structmemeval}.
 This raises a practical question: \textit{How can we find the most suitable memory harness for a given task?}
 
 To answer this question, we propose \sysname{}, an evolutionary method that automatically discovers task-optimized memory harnesses for LLM agents.
-Specifically, \sysname{} represents a memory harness as a \textit{memory program}: a Python module with a fixed interface consisting of three components, Schema, Logic, and Instruction.
-The Schema defines the data formats for storage and retrieval, the Logic implements the \texttt{read} and \texttt{write} operations, and the Instruction guides the agent's interaction with the knowledge base.
+Specifically, \sysname{} represents a memory harness as a \textit{memory program}: a Python module with a fixed interface consisting of three components, \textit{Schema}, \textit{Logic}, and \textit{Instruction}.
+The \textit{Schema} defines the data formats for storage and retrieval, the \textit{Logic} implements the \texttt{read} and \texttt{write} operations, and the \textit{Instruction} guides the agent's interaction with the knowledge base.
 These components are jointly optimized through reflective code evolution.
-In comparison, although prior systems improve agent memory, their search is typically confined to a narrow, designer-specified space~\citep{zhao2024expel,cai2025flex,memskill,memevolve,gepa}.
-\sysname{} searches over the memory harness itself with two mechanisms: an LLM-based reflector that debugs evaluation failures and generates targeted improvements, and a population-based program search strategy that balances exploration and exploitation while enforcing constraints on program quality.
+In comparison, although prior works have also searched over and improved agent memory harnesses, their search is typically confined to a narrow, designer-specified space~\citep{zhao2024expel,cai2025flex,memskill,memevolve,gepa}.
+\sysname{} searches over the memory harness itself with two mechanisms: a reflector agent that debugs memory program failures and generates targeted improvements, and a population-based program search strategy that balances exploration and exploitation while enforcing constraints on program quality.
 
-\looseness=-1
-We apply \sysname{} to four benchmarks (LoCoMo, ALFWorld, HealthBench, and PRBench), evaluating its performance against nine competitive baselines across three memory paradigms~\citep{locomo,alfworld,healthbench,prbench}.
+
+We apply \sysname{} to four tasks covering conversation, embodied planning, and specialized reasoning, evaluating its performance against nine competitive baselines across three memory paradigms~\citep{locomo,alfworld,healthbench,prbench}.
 Our results indicate that \sysname{} achieves the best overall score and performs robustly on every task; in contrast, the baselines perform well only on specific tasks.
 Furthermore, we observe that the optimal memory programs for different tasks are distinct in both structure and procedure.
 By exploring a broad memory-program search space, \sysname{} evaluates diverse memory programs to identify the task-optimized memory program.
@@ -230,9 +226,9 @@ Together, these results support the view that every task benefits from its own m
 
 In summary, our main contributions are as follows:
 \begin{enumerate}
-    \item We formulate task-specific memory harness discovery as \textit{memory-program search}, where an executable Python program jointly specifies Schema, Logic, and Instruction.
-    \item We propose \sysname{}, a validation-driven method that optimizes memory harnesses from target-task feedback and achieves the strongest overall performance across four benchmark families.
-    \item We show that task-optimized memory harnesses are distinct in both structure and procedure across conversation, embodied planning, and expert reasoning tasks.
+    \item We formulate task-optimized memory harness discovery as \textit{memory-program search}, where an executable Python program jointly specifies Schema, Logic, and Instruction.
+    \item We propose \sysname{}, an evolutionary method that optimizes memory harnesses from target-task feedback through reflective code evolution and achieves the strongest overall performance across four tasks compared to competitive generalist memory harnesses.
+    \item We perform in-depth analysis over the memory harness space and find that task-optimized memory harnesses are distinct in both structure and procedure across different tasks: conversation, embodied planning, and expert reasoning tasks all require different optimal memory harnesses.
 \end{enumerate}
 
 % === §2 Problem Setting ===

@@ -10,19 +10,21 @@ Evolved programs form several regions with different storage designs, including 
 Programs from different benchmarks often appear in the same regions.
 This pattern suggests that evolution can try common storage designs before adapting them to a task.
 Figure~\ref{fig:landscape}(a,b) further compares population-based search with a linear variant.
-The linear variant starts from one empty seed and repeatedly mutates only the current best program\rev{; this corresponds to the $-$\,Diversity ablation in Table~\ref{tab:ablation}}.
+The linear variant starts from one empty seed and repeatedly mutates only the current best program, which corresponds to the \textit{$-$\,Diversity} ablation in Table~\ref{tab:ablation}.
 Population search keeps multiple candidates active, so later mutations can draw from more than one candidate lineage.
-The LoCoMo ablation matches this interpretation: removing diversity reduces test F1 from 0.459 to 0.318, and max sampling with multiple starters reaches 0.381 (Table~\ref{tab:ablation}).
-These results suggest that population search helps preserve promising program lineages under a small iteration budget.
+The LoCoMo ablation matches this interpretation: \textit{$-$\,Diversity} reduces test F1 from 0.459 to 0.318, and \textit{Max parent selection} reaches 0.381 (Table~\ref{tab:ablation}).
+Together, these results indicate that the memory-program space is diverse and multi-modal.
+Population-based search explores this space effectively by maintaining multiple candidate lineages, improving the chance of finding a strong task-specific program under a small iteration budget.
 
 \paragraph{Is evolution stable across random seeds?}
 
 % === Table: Stability Across Seeds ===
 \input{tables/stability}
 
+\looseness=-1
 A practical concern for evolutionary methods is sensitivity to random seeds, especially under a 20-iteration budget in which discovery quality can depend on early mutations.
 To evaluate this effect, Table~\ref{tab:stability} reports test scores from five independent runs on three benchmarks.
-Across all benchmarks, the coefficient of variation remains \rev{at or below 10\%}, which indicates stable outcomes with moderate variance.
+Across all benchmarks, the coefficient of variation remains at or below 10\%, which indicates stable outcomes with moderate variance.
 Across the 15 runs, 14 outperform the strongest baseline, supporting consistent gains across initializations.
 Appendix~\ref{app:stability} provides full per-seed scores and validation trajectories.
 
