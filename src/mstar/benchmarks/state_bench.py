@@ -11,6 +11,8 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import random
+import sys
+import threading
 import traceback
 from pathlib import Path
 from typing import Any
@@ -21,6 +23,10 @@ from mstar.evolution.types import DataItem, Dataset
 
 DEFAULT_DATA_DIR = "Data/STATE-Bench"
 DEFAULT_DOMAINS = ("customer_support", "travel", "shopping_assistant")
+
+_INIT_LOCK = threading.Lock()
+_INITIALIZED = False
+_DEFAULT_JUDGE_REASONING = "low"
 
 
 class StateBenchInfraError(RuntimeViolationError):
@@ -195,14 +201,195 @@ def load_state_bench(
     )
 
 
-def _run_single_task(  # type: ignore[empty-body]  — full impl in Task 7
+def _ensure_state_bench_initialized() -> None:
+    """Idempotent: append vendored Data/STATE-Bench to sys.path + load .env once.
+
+    Double-checked locking: cheap fast-path read, locked slow-path init. Safe
+    under threads (we run tasks via ThreadPoolExecutor).
+    """
+    global _INITIALIZED
+    if _INITIALIZED:
+        return
+    with _INIT_LOCK:
+        if _INITIALIZED:
+            return
+        vendor_root = Path(DEFAULT_DATA_DIR).resolve()
+        if str(vendor_root) not in sys.path:
+            sys.path.insert(0, str(vendor_root))
+
+        env_path = vendor_root / ".env"
+        if env_path.exists():
+            try:
+                from dotenv import load_dotenv
+            except ImportError as exc:
+                raise StateBenchInfraError(
+                    "python-dotenv is required for STATE-Bench. "
+                    "Install with: uv sync --extra state-bench"
+                ) from exc
+            load_dotenv(env_path, override=False)
+        _INITIALIZED = True
+
+
+def _looks_like_infra_error(exc: BaseException) -> bool:
+    """True if the exception is an openai/network/proxy infrastructure issue."""
+    try:
+        import openai
+    except ImportError:
+        return False
+    return isinstance(
+        exc,
+        (
+            openai.APIConnectionError,
+            openai.APITimeoutError,
+            openai.RateLimitError,
+            openai.InternalServerError,
+        ),
+    )
+
+
+def _build_pooled_client() -> Any:
+    """Construct a STATE-Bench PooledLLMClient. Surfaces infra failures cleanly."""
+    try:
+        from state_bench.client import PooledLLMClient
+    except ImportError as exc:
+        raise StateBenchInfraError(f"STATE-Bench import failed: {exc}") from exc
+    try:
+        return PooledLLMClient()
+    except Exception as exc:
+        if _looks_like_infra_error(exc):
+            raise StateBenchInfraError(f"PooledLLMClient init failed: {exc}") from exc
+        raise
+
+
+def _extract_tool_calls(conversation: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Pull tool_calls list from a STATE-Bench conversation.
+
+    The conversation is the Responses API input array — function_call items
+    appear as raw output items in the conversation. The orchestrator's run_task
+    builds these as dicts; we mirror scripts/run_task.py's extraction.
+    """
+    out: list[dict[str, Any]] = []
+    for msg in conversation:
+        if isinstance(msg, dict):
+            tc = msg.get("tool_calls")
+            if tc:
+                out.extend(tc)
+    return out
+
+
+def _run_single_task(
     item: DataItem,
     kb_text: str,
-    task_model: str,
+    task_model: str,  # noqa: ARG001 — STATE-Bench routes via PooledLLMClient + AZURE_OPENAI_DEPLOYMENTS env
     reasoning_effort: str | None,
 ) -> tuple[str, float, str]:
-    """Run one STATE-Bench task end-to-end. Implemented in Task 7."""
-    raise NotImplementedError("_run_single_task is implemented in Task 7")
+    """Run one STATE-Bench task and return (transcript, score, rationale).
+
+    Score: ``state_pass@1 ∧ task_requirements_pass@1`` -> 1.0 or 0.0.
+    Infra exceptions become ``StateBenchInfraError``; other exceptions bubble
+    up to the scorer which records them as model failures.
+    """
+    _ensure_state_bench_initialized()
+
+    try:
+        from state_bench.domain import get_domain_config
+        from state_bench.env_loader import load_task_environment
+        from state_bench.orchestrator import run_task
+        from state_bench.schemas import TaskDefinition
+        from state_bench.scoring import (
+            TaskRequirementsJudge,
+            combine_task_completion,
+            evaluate_state_requirements,
+        )
+        from agents.base import AgentRuntimeContext
+        from agents.mstar_kb_agent import MstarKBAgent
+    except ImportError as exc:
+        raise StateBenchInfraError(f"STATE-Bench import failed: {exc}") from exc
+
+    try:
+        task_path = Path(item.metadata["task_path"])
+        domain_name = item.metadata["domain"]
+        task = TaskDefinition.load(task_path)
+        domain = get_domain_config(domain_name)
+        env_data, _env_path = load_task_environment(domain, task)
+
+        client = _build_pooled_client()
+
+        agent_system_prompt = domain.agent_system_prompt.format(
+            now=task.now, user_id=task.user_id
+        )
+        env = domain.environment_class(env_data.deep_copy(), now=task.now)
+
+        runtime_ctx = AgentRuntimeContext(
+            task_id=task.task_id,
+            user_id=task.user_id,
+            domain=domain.name,
+            now=task.now,
+            task_summary=task.task_summary,
+            state_requirements=task.state_requirements,
+            task_requirements=task.task_requirements,
+        )
+
+        agent = MstarKBAgent(
+            client=client,
+            system_prompt=agent_system_prompt,
+            tools=domain.tool_schemas,
+            tool_handlers=env.tool_handlers,
+            runtime_context=runtime_ctx,
+            kb_text=kb_text,
+        )
+
+        trajectory = run_task(
+            task,
+            env_data,
+            task.user_id,
+            client,
+            domain=domain,
+            agent=agent,
+            env=env,
+        )
+
+        # Score state (deterministic) + task requirements (LLM judge)
+        trajectory.state_requirements_score = evaluate_state_requirements(task, trajectory.state_diff)
+        tool_calls = _extract_tool_calls(trajectory.conversation)
+        judge = TaskRequirementsJudge(
+            client=client,
+            prompts_dir=domain.prompts_dir,
+            system_prompt=domain.judge_system_prompt,
+            reasoning_effort=reasoning_effort or _DEFAULT_JUDGE_REASONING,
+        )
+        trajectory.task_requirements_score = judge.evaluate(
+            task, trajectory.conversation, tool_calls, trajectory.state_diff
+        )
+        trajectory.task_completion_pass = combine_task_completion(
+            trajectory.state_requirements_score, trajectory.task_requirements_score
+        )
+
+        score = 1.0 if trajectory.task_completion_pass == 1 else 0.0
+        transcript = json.dumps(trajectory.conversation, indent=2, default=str)
+        state_pass = (
+            trajectory.state_requirements_score.score
+            if trajectory.state_requirements_score
+            else None
+        )
+        reqs_pass = (
+            trajectory.task_requirements_score.score
+            if trajectory.task_requirements_score
+            else None
+        )
+        rationale = (
+            f"state_pass={state_pass} task_reqs_pass={reqs_pass} "
+            f"completion={trajectory.task_completion_pass}"
+        )
+        return (transcript, score, rationale)
+    except StateBenchInfraError:
+        raise
+    except Exception as exc:
+        if _looks_like_infra_error(exc):
+            raise StateBenchInfraError(
+                f"infra failure during task {item.metadata.get('task_id')}: {exc}"
+            ) from exc
+        raise
 
 
 class StateBenchValScorer:

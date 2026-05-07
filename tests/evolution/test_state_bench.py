@@ -304,3 +304,56 @@ def test_state_bench_val_scorer_propagates_infra_error(monkeypatch):
             always_on_knowledge="",
             reasoning_effort=None,
         )
+
+
+def test_ensure_state_bench_initialized_is_idempotent():
+    """Initializer should be safely callable multiple times."""
+    import importlib
+
+    from mstar.benchmarks import state_bench as sb
+
+    sb._ensure_state_bench_initialized()
+    sb._ensure_state_bench_initialized()
+    mod = importlib.import_module("state_bench")
+    assert mod is not None
+
+
+def test_looks_like_infra_error_classifies_openai_exceptions():
+    import openai
+
+    from mstar.benchmarks.state_bench import _looks_like_infra_error
+
+    # APIConnectionError takes message+request, but it's enough to construct via __new__ for issubclass test:
+    assert _looks_like_infra_error(openai.APIConnectionError.__new__(openai.APIConnectionError)) is True
+    assert _looks_like_infra_error(openai.APITimeoutError.__new__(openai.APITimeoutError)) is True
+    assert _looks_like_infra_error(ValueError("not infra")) is False
+    assert _looks_like_infra_error(KeyError("not infra")) is False
+
+
+@pytest.mark.llm
+def test_state_bench_real_task_passes_or_scores_zero():
+    """Real LLM smoke test: run one customer_support task via Azure proxy.
+
+    Requires:
+    - Data/STATE-Bench/ vendored (Task 0)
+    - azure-openai-proxy running on http://127.0.0.1:4000
+    - Logged into ``az`` CLI (AzureCliCredential).
+    """
+    from mstar.benchmarks.state_bench import StateBenchValScorer, load_state_bench
+
+    ds = load_state_bench(domain="customer_support", seed=0)
+    item = ds.val[0]
+    scorer = StateBenchValScorer(max_workers=1, task_timeout=300.0)
+    out = scorer.score_batch(
+        items=[item],
+        retrieved=[""],
+        task_model="azure/gpt-5.1",
+        instruction_response="",
+        always_on_knowledge="",
+        reasoning_effort="low",
+    )
+    assert len(out) == 1
+    transcript, score, _rationale = out[0]
+    # Don't assert score==1 — just that the harness ran and returned a valid score.
+    assert score in (0.0, 1.0)
+    assert isinstance(transcript, str) and len(transcript) > 0
