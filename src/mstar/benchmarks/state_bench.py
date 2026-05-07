@@ -311,6 +311,14 @@ def _run_single_task(
         domain_name = item.metadata["domain"]
         task = TaskDefinition.load(task_path)
         domain = get_domain_config(domain_name)
+
+        # Resolve task_env_path to an absolute path rooted at the vendored
+        # STATE-Bench dir. Upstream resolves non-absolute paths via Path.cwd(),
+        # which fails when CWD is the mstar repo root rather than Data/STATE-Bench.
+        if task.task_env_path and not Path(task.task_env_path).is_absolute():
+            vendor_root = Path(DEFAULT_DATA_DIR).resolve()
+            task.task_env_path = str(vendor_root / task.task_env_path)
+
         env_data, _env_path = load_task_environment(domain, task)
 
         client = _build_pooled_client()
