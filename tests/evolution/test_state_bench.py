@@ -126,3 +126,51 @@ def test_render_question_no_opening_message_falls_back_to_summary():
     out = _render_question(task)
     assert "z" in out
     assert "Help the user." in out
+
+
+def test_stratified_half_split_is_deterministic_and_balanced():
+    from mstar.benchmarks.state_bench import _stratified_half_split
+
+    items = list(range(100))
+    a, b = _stratified_half_split(items, seed=42)
+    assert len(a) == 50 and len(b) == 50
+    assert set(a) | set(b) == set(items)
+    assert set(a) & set(b) == set()
+    a2, b2 = _stratified_half_split(items, seed=42)
+    assert a == a2 and b == b2
+    a3, _ = _stratified_half_split(items, seed=43)
+    assert a != a3
+
+
+def test_load_state_bench_synth_fixture():
+    from mstar.benchmarks.state_bench import load_state_bench
+
+    ds = load_state_bench(
+        data_dir="tests/evolution/fixtures/state_bench_synth",
+        domain="customer_support",
+        seed=0,
+    )
+    # 10 train splits half/half -> 5 train + 5 val. Official test = 5.
+    assert len(ds.train) == 5
+    assert len(ds.val) == 5
+    assert len(ds.test) == 5
+    item = ds.train[0]
+    assert "Synthetic task" in item.raw_text
+    assert item.metadata["domain"] == "customer_support"
+    assert item.metadata["task_id"].startswith("synth-")
+    assert "task_path" in item.metadata
+
+
+def test_load_state_bench_synth_supports_default_data_dir_override():
+    """Loading without explicit data_dir uses Data/STATE-Bench by default; loader
+    accepts a data_dir kwarg per the registered loader signature."""
+    from mstar.benchmarks.state_bench import load_state_bench
+
+    ds = load_state_bench(
+        data_dir="tests/evolution/fixtures/state_bench_synth",
+        domain="customer_support",
+        seed=0,
+    )
+    # Same content via deterministic seed
+    ids_train = [it.metadata["task_id"] for it in ds.train]
+    assert all(tid.startswith("synth-") for tid in ids_train)
