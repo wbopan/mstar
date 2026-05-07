@@ -68,3 +68,17 @@ def _render_d_full(task: dict[str, Any]) -> str:
         parts.append(f"User opens with: {opening}")
 
     return "\n".join(parts).rstrip() + "\n"
+
+
+def _render_question(task: dict[str, Any]) -> str:
+    """Render the question string used as `DataItem.question`.
+
+    Deterministic; includes task_id (so failed-case logs are easy to grep) and
+    the opening_message (or task_summary as fallback) so the agent has the
+    starting context the orchestrator will inject.
+    """
+    task_id = task.get("task_id", "<unknown>")
+    opening = (task.get("opening_message") or "").strip()
+    if not opening:
+        opening = (task.get("task_summary") or "").strip()
+    return f"[{task_id}] {opening}"

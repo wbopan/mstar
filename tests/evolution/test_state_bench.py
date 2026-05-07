@@ -105,3 +105,24 @@ def test_render_d_full_handles_minimal_task():
     out = _render_d_full(minimal)
     assert "Do nothing." in out
     assert "hi" in out
+
+
+def test_render_question_includes_opening_and_task_id():
+    from mstar.benchmarks.state_bench import _render_question
+
+    out = _render_question(_sample_task_dict())
+    assert "1-return_partial_order" in out
+    assert "Hi, I'd like to return the headphones" in out
+
+
+def test_render_question_no_opening_message_falls_back_to_summary():
+    from mstar.benchmarks.state_bench import _render_question
+
+    task = {
+        "task_id": "z",
+        "task_summary": "**Task:** Help the user.",
+        "opening_message": "",
+    }
+    out = _render_question(task)
+    assert "z" in out
+    assert "Help the user." in out
