@@ -8,16 +8,28 @@ injects the mstar KB result.
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import random
+import traceback
 from pathlib import Path
 from typing import Any
 
 from mstar.datasets import register_dataset
+from mstar.evolution.evaluator import RuntimeViolationError
 from mstar.evolution.types import DataItem, Dataset
 
 DEFAULT_DATA_DIR = "Data/STATE-Bench"
 DEFAULT_DOMAINS = ("customer_support", "travel", "shopping_assistant")
+
+
+class StateBenchInfraError(RuntimeViolationError):
+    """Infrastructure failure during a STATE-Bench task (proxy/network/Azure).
+
+    MUST inherit RuntimeViolationError so the evaluator's existing infra-error
+    handling (evaluator.py:552, 666) catches it. Subclassing RuntimeError
+    directly will crash the evolution run.
+    """
 
 
 def _render_d_full(task: dict[str, Any]) -> str:
@@ -174,12 +186,82 @@ def load_state_bench(
             tp = dom_root / "tasks" / f"{tid}.json"
             test_items.append(_build_data_item(_load_task_dict(tp), domain=d, task_path=tp))
 
-    # val_scorer wired in Task 6/7. Loader returns None for now so this task is
-    # testable in isolation.
     return Dataset(
         train=train_items,
         val=val_items,
         test=test_items,
         compare_fn=None,
-        val_scorer=None,
+        val_scorer=StateBenchValScorer(),
     )
+
+
+def _run_single_task(  # type: ignore[empty-body]  — full impl in Task 7
+    item: DataItem,
+    kb_text: str,
+    task_model: str,
+    reasoning_effort: str | None,
+) -> tuple[str, float, str]:
+    """Run one STATE-Bench task end-to-end. Implemented in Task 7."""
+    raise NotImplementedError("_run_single_task is implemented in Task 7")
+
+
+class StateBenchValScorer:
+    """val_scorer for STATE-Bench. One thread per task with bounded timeout.
+
+    Concurrency uses ``ThreadPoolExecutor`` with a try/finally + ``shutdown(wait=False,
+    cancel_futures=True)`` exit. Do NOT use ``with`` — ``__exit__`` calls
+    ``shutdown(wait=True)`` and hangs forever on a stuck Azure thread.
+    """
+
+    def __init__(self, max_workers: int = 8, task_timeout: float = 600.0) -> None:
+        self.max_workers = max_workers
+        self.task_timeout = task_timeout
+
+    def score_batch(
+        self,
+        items: list[DataItem],
+        retrieved: list[str],
+        task_model: str,
+        instruction_response: str,  # noqa: ARG002 — required by ValScorer protocol, unused
+        always_on_knowledge: str = "",  # noqa: ARG002 — same
+        *,
+        reasoning_effort: str | None = None,
+    ) -> list[tuple[str, float, str]]:
+        if not items:
+            return []
+        workers = min(self.max_workers, len(items))
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+        results: list[tuple[str, float, str] | None] = [None] * len(items)
+        try:
+            futures = {
+                executor.submit(_run_single_task, item, retrieved[i], task_model, reasoning_effort): i
+                for i, item in enumerate(items)
+            }
+            for fut in concurrent.futures.as_completed(futures, timeout=None):
+                idx = futures[fut]
+                try:
+                    results[idx] = fut.result(timeout=self.task_timeout)
+                except StateBenchInfraError:
+                    raise
+                except concurrent.futures.TimeoutError:
+                    results[idx] = (
+                        f"task timed out after {self.task_timeout}s",
+                        0.0,
+                        f"STATE-Bench task. Hit per-task timeout ({self.task_timeout}s).",
+                    )
+                except Exception as exc:
+                    tb = traceback.format_exc()
+                    results[idx] = (
+                        f"task crashed: {exc}\n{tb}",
+                        0.0,
+                        f"STATE-Bench task. Model-side exception: {exc}",
+                    )
+        finally:
+            # Do NOT use `with ThreadPoolExecutor(...)` — its __exit__ calls
+            # shutdown(wait=True) which hangs forever on stuck Azure threads.
+            executor.shutdown(wait=False, cancel_futures=True)
+
+        return [
+            r if r is not None else ("missing result", 0.0, "scorer bug: result not populated")
+            for r in results
+        ]

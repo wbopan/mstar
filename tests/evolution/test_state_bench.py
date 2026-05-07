@@ -211,3 +211,96 @@ def test_mstar_kb_agent_no_kb_text_passes_through_unchanged():
     messages = [{"role": "system", "content": "Sys."}, {"role": "user", "content": "Hi."}]
     out = agent.prepare_conversation(messages)
     assert out == messages
+
+
+def test_state_bench_infra_error_inherits_runtime_violation_error():
+    """CRITICAL: must inherit RuntimeViolationError so evaluator infra-error path catches it."""
+    from mstar.benchmarks.state_bench import StateBenchInfraError
+    from mstar.evolution.evaluator import RuntimeViolationError
+
+    assert issubclass(StateBenchInfraError, RuntimeViolationError)
+
+
+def test_state_bench_val_scorer_dispatches_and_aggregates(monkeypatch):
+    from mstar.benchmarks import state_bench as sb
+    from mstar.evolution.types import DataItem
+
+    calls: list[tuple] = []
+
+    def fake_run(item, kb_text, task_model, reasoning_effort):
+        calls.append((item.metadata["task_id"], kb_text, task_model, reasoning_effort))
+        return (
+            "transcript-" + item.metadata["task_id"],
+            1.0,
+            "rationale-" + item.metadata["task_id"],
+        )
+
+    monkeypatch.setattr(sb, "_run_single_task", fake_run)
+
+    items = [
+        DataItem(raw_text="", question="q1", expected_answer="", metadata={"task_id": "a"}),
+        DataItem(raw_text="", question="q2", expected_answer="", metadata={"task_id": "b"}),
+    ]
+    scorer = sb.StateBenchValScorer(max_workers=2, task_timeout=10.0)
+    out = scorer.score_batch(
+        items=items,
+        retrieved=["kb-a", "kb-b"],
+        task_model="azure/gpt-5.1",
+        instruction_response="ignored",
+        always_on_knowledge="",
+        reasoning_effort="low",
+    )
+    assert len(out) == 2
+    assert {c[0] for c in calls} == {"a", "b"}
+    transcripts = {t[0] for t in out}
+    assert "transcript-a" in transcripts and "transcript-b" in transcripts
+
+
+def test_state_bench_val_scorer_handles_per_task_exception(monkeypatch):
+    from mstar.benchmarks import state_bench as sb
+    from mstar.evolution.types import DataItem
+
+    def fake_run(item, kb_text, task_model, reasoning_effort):
+        if item.metadata["task_id"] == "boom":
+            raise ValueError("simulated model failure")
+        return ("ok", 1.0, "ok")
+
+    monkeypatch.setattr(sb, "_run_single_task", fake_run)
+    items = [
+        DataItem(raw_text="", question="", expected_answer="", metadata={"task_id": "ok"}),
+        DataItem(raw_text="", question="", expected_answer="", metadata={"task_id": "boom"}),
+    ]
+    scorer = sb.StateBenchValScorer(max_workers=2, task_timeout=10.0)
+    out = scorer.score_batch(
+        items=items,
+        retrieved=["", ""],
+        task_model="azure/gpt-5.1",
+        instruction_response="",
+        always_on_knowledge="",
+        reasoning_effort=None,
+    )
+    failed = [r for r in out if r[1] == 0.0]
+    assert len(failed) == 1
+    assert "simulated model failure" in failed[0][0]
+
+
+def test_state_bench_val_scorer_propagates_infra_error(monkeypatch):
+    from mstar.benchmarks import state_bench as sb
+    from mstar.evolution.types import DataItem
+
+    def fake_run(item, kb_text, task_model, reasoning_effort):
+        raise sb.StateBenchInfraError("proxy down")
+
+    monkeypatch.setattr(sb, "_run_single_task", fake_run)
+    items = [DataItem(raw_text="", question="", expected_answer="", metadata={"task_id": "x"})]
+    scorer = sb.StateBenchValScorer(max_workers=1, task_timeout=10.0)
+
+    with pytest.raises(sb.StateBenchInfraError):
+        scorer.score_batch(
+            items=items,
+            retrieved=[""],
+            task_model="azure/gpt-5.1",
+            instruction_response="",
+            always_on_knowledge="",
+            reasoning_effort=None,
+        )
