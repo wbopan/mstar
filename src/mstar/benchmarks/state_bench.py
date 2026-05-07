@@ -155,17 +155,20 @@ def load_state_bench(
     *,
     data_dir: str | Path = DEFAULT_DATA_DIR,
     domain: str | None = None,
+    category: str | None = None,
     seed: int = 0,
-    category: str | None = None,  # noqa: ARG001 — accepted for API compatibility, unused
 ) -> Dataset:
     """Load STATE-Bench tasks as an mstar Dataset.
 
     Splits: official 100 train -> 50 train + 50 val (deterministic by seed).
             official 50 test  -> kept as-is.
-    Set ``domain`` to restrict to one of customer_support / travel / shopping_assistant.
+
+    Restrict to a single STATE-Bench domain via ``domain=`` or ``category=``
+    (mstar's CLI uses ``--category`` as the canonical knob; both forms accepted).
     """
     data_root = Path(data_dir)
-    domains: tuple[str, ...] = (domain,) if domain else DEFAULT_DOMAINS
+    selected = domain or category
+    domains: tuple[str, ...] = (selected,) if selected else DEFAULT_DOMAINS
 
     train_items: list[DataItem] = []
     val_items: list[DataItem] = []
@@ -198,6 +201,8 @@ def load_state_bench(
         test=test_items,
         compare_fn=None,
         val_scorer=StateBenchValScorer(),
+        available_categories=list(DEFAULT_DOMAINS),
+        category_key="domain",
     )
 
 
