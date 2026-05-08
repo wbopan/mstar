@@ -403,6 +403,46 @@ def test_build_rationale_handles_pass_case_without_failed_requirements_block():
     assert "Failed requirements:" not in out
 
 
+def test_build_compact_transcript_keeps_size_under_2kb_for_typical_task():
+    """The reflector must NOT see the full Responses API JSON.
+
+    A typical 4-turn STATE-Bench task with full JSON is ~16-30 KB; the compact
+    transcript should be ≤2 KB (≤500 tokens), so 3 failed cases × transcript
+    fit easily into a 25K-token reflection prompt.
+    """
+    from types import SimpleNamespace
+
+    from mstar.benchmarks.state_bench import _build_compact_transcript
+
+    task = SimpleNamespace(task_id="123-cs_return")
+    trajectory = SimpleNamespace(
+        conversation=[
+            {"role": "user", "content": "Hi I want to return ORD-6001."},
+            {
+                "role": "assistant",
+                "content": "Let me look that up." + " details" * 100,  # bloat
+                "tool_calls": [{"name": "get_order", "arguments": {"order_id": "ORD-6001"}}],
+            },
+            {"role": "tool", "content": "ORD-6001 has 3 items..." + " bloat" * 200},
+            {"role": "user", "content": "Just refund the headphones."},
+            {
+                "role": "assistant",
+                "content": "Processing now." + " more" * 80,
+                "tool_calls": [{"name": "process_return", "arguments": {}}],
+            },
+        ]
+    )
+    out = _build_compact_transcript(task, trajectory)
+    assert "123-cs_return" in out
+    assert "User T1" in out and "User T2" in out
+    assert "Agent T1" in out and "Agent T2" in out
+    assert "get_order" in out
+    assert "process_return" in out
+    # Tight bound — the compact form should NEVER blow up to 16+ KB even with
+    # very long content (each line capped at ~150 chars).
+    assert len(out) < 2000, f"compact transcript too large: {len(out)} chars"
+
+
 @pytest.mark.llm
 def test_state_bench_real_task_passes_or_scores_zero():
     """Real LLM smoke test: run one customer_support task via Azure proxy.

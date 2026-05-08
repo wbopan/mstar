@@ -292,6 +292,37 @@ def _last_assistant_text(conversation: list[dict[str, Any]], max_chars: int = 40
     return ""
 
 
+def _build_compact_transcript(task: Any, trajectory: Any) -> str:
+    """Render a compact action/utterance trace in the ALFWorld 'output' style.
+
+    Keeps each turn ≤ ~150 chars (user/agent text snippet + tool names called),
+    so a multi-turn task fits in ~1-2 KB rather than the 16-30 KB full JSON
+    dump. Combined with the rationale field, this gives the reflector both
+    'what the agent did' (transcript) and 'why it failed' (rationale) in
+    bounded tokens.
+    """
+    lines: list[str] = [f"# Task {task.task_id}"]
+    turn = 0
+    for msg in trajectory.conversation:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        content = msg.get("content")
+        if role == "user" and isinstance(content, str):
+            turn += 1
+            lines.append(f"User T{turn}: {content.strip()[:150]}")
+        elif role == "assistant":
+            tool_calls = msg.get("tool_calls") or []
+            tool_names = [tc.get("name", "?") for tc in tool_calls if isinstance(tc, dict)]
+            text = (content if isinstance(content, str) else "") or ""
+            text = text.strip().replace("\n", " ")[:150]
+            if tool_names:
+                lines.append(f"Agent T{turn}: tools={tool_names} | {text}")
+            elif text:
+                lines.append(f"Agent T{turn}: {text}")
+    return "\n".join(lines)
+
+
 def _build_rationale(task: Any, trajectory: Any) -> str:
     """Build a reflection-grade rationale string from a scored trajectory.
 
@@ -443,7 +474,14 @@ def _run_single_task(
         )
 
         score = 1.0 if trajectory.task_completion_pass == 1 else 0.0
-        transcript = json.dumps(trajectory.conversation, indent=2, default=str)
+        # transcript = compact behavior trace; rationale = judge analysis.
+        # We deliberately do NOT use the full Responses API conversation JSON
+        # (16-30 KB per task): with reflection_max_failed_cases=3 it produced
+        # ~22K-token reflect prompts that hung gpt-5.1/gpt-5.4 with
+        # reasoning_effort=high for 10+ min per call. The compact trace keeps
+        # the reflection prompt under ~5K tokens while still surfacing what
+        # the agent did.
+        transcript = _build_compact_transcript(task, trajectory)
         rationale = _build_rationale(task, trajectory)
         return (transcript, score, rationale)
     except StateBenchInfraError:
