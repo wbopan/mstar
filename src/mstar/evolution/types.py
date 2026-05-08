@@ -83,7 +83,18 @@ class DataItem:
 
 @dataclass
 class Dataset:
-    """A benchmark dataset with its associated scorer."""
+    """A benchmark dataset with its associated scorer.
+
+    Splitting contract:
+        - ``train`` and ``val`` are always populated by the loader.
+        - ``test`` is the official held-out set IF the benchmark has one.
+          When non-empty, the CLI's ``--test-size`` is treated as a config
+          conflict; the loader's test set is the source of truth and is used
+          verbatim by final eval.
+        - When ``test`` is empty, ``--test-size`` controls how the CLI carves
+          a test set from val (or copies val, or skips test eval). See
+          ``mstar.evolution.__main__.split_val_test`` for details.
+    """
 
     train: list[DataItem]
     val: list[DataItem]
