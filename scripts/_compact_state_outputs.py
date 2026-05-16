@@ -48,6 +48,16 @@ def _process_failed_cases(cases: list[dict]) -> tuple[int, int]:
     return before, after
 
 
+def _process_per_case_outputs(outputs: list[str], questions: list[str]) -> tuple[int, int]:
+    """Mutate per_case_outputs in place; questions parallel-array gives task_id."""
+    before = sum(len(o or "") for o in outputs)
+    for i, o in enumerate(outputs):
+        q = questions[i] if i < len(questions) else ""
+        outputs[i] = _compact_output(q, o or "")
+    after = sum(len(o or "") for o in outputs)
+    return before, after
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         print(__doc__)
@@ -63,12 +73,29 @@ def main() -> None:
     for entry in state.get("pool", []):
         for key in ("eval_result", "reflection_result"):
             er = entry.get(key)
-            if er and "failed_cases" in er:
+            if not er:
+                continue
+            if "failed_cases" in er:
                 b, a = _process_failed_cases(er["failed_cases"])
                 total_before += b
                 total_after += a
+            if "success_cases" in er:
+                b, a = _process_failed_cases(er["success_cases"])
+                total_before += b
+                total_after += a
+            if "per_case_outputs" in er:
+                # Build a parallel questions list — try several sources.
+                # Best: per_case items in eval_result if present; fallback: derive
+                # from failed_cases + success_cases by matching index → score.
+                questions = [""] * len(er["per_case_outputs"])
+                # Heuristic: questions aren't stored alongside per_case_outputs in
+                # this state.json shape, so fallback compaction has no task_id
+                # context. _compact_output handles missing question gracefully.
+                b, a = _process_per_case_outputs(er["per_case_outputs"], questions)
+                total_before += b
+                total_after += a
     state_path.write_text(json.dumps(state))
-    print(f"state.json: rewrote {total_before:,} -> {total_after:,} chars in failed_cases output fields")
+    print(f"state.json: rewrote {total_before:,} -> {total_after:,} chars across failed/success/per_case outputs")
 
     for fc_path in (out_dir / "llm_calls").rglob("failed_cases.json"):
         cases = json.loads(fc_path.read_text())
