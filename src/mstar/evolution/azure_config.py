@@ -30,7 +30,7 @@ def _has_azure_prefix(models: list[str]) -> bool:
 
 
 @dataclass(frozen=True)
-class _AzureConfig:
+class AzureConfig:
     """Endpoint + AAD token provider for direct Azure OpenAI access."""
 
     api_base: str
@@ -38,8 +38,14 @@ class _AzureConfig:
     token_provider: Callable[[], str]
 
 
-# Set by configure_azure_auth(); consumed by apply_azure_kwargs().
-_CONFIG: _AzureConfig | None = None
+# Set by configure_azure_auth(); consumed by apply_azure_kwargs() and the
+# codex Responses-API adapter (azure_responses.py) via get_azure_config().
+_CONFIG: AzureConfig | None = None
+
+
+def get_azure_config() -> AzureConfig | None:
+    """Return the active Azure config, or None if no azure/ run is configured."""
+    return _CONFIG
 
 
 def configure_azure_auth(
@@ -84,7 +90,7 @@ def configure_azure_auth(
         AzureCliCredential(), _COGNITIVE_SERVICES_SCOPE
     )
 
-    _CONFIG = _AzureConfig(
+    _CONFIG = AzureConfig(
         api_base=azure_api_base,
         api_version=azure_api_version,
         token_provider=token_provider,
