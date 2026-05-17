@@ -31,17 +31,57 @@ from mstar.logging.run_output import RunOutputManager
 
 
 def split_val_test(dataset: Dataset, test_size: int, seed: int) -> None:
-    """Split dataset.val into evolution-val and held-out test, mutating in place.
+    """Resolve dataset.test, mutating in place.
+
+    Two regimes, gated by whether the loader supplied a test split:
+
+    1. **Loader provided test** (``dataset.test`` non-empty before this call):
+       The loader is the source of truth. Default (``test_size == -1``) keeps
+       the loader's test set unchanged and emits an info line so users know
+       which test set is in use (this used to be silently overwritten in
+       earlier mstar versions). Any explicit ``test_size`` is treated as a
+       config conflict and exits with a clear error.
+
+    2. **Loader didn't provide test** (``dataset.test`` empty): CLI carves a
+       test set from val, identical to the legacy behavior:
+         * ``-1`` → copy full val as test (backward-compat fallback)
+         * ``0``  → leave test empty (skips final eval)
+         * ``N>0`` → hold out N items from val after seeded shuffle
 
     Args:
         dataset: Dataset to mutate (sets dataset.val and dataset.test).
-        test_size: -1 = copy full val as test (backward compat), 0 = no test,
-                   N > 0 = hold out last N items after seeded shuffle.
-        seed: Random seed for deterministic splitting.
+        test_size: -1 = default (loader-aware), 0 = explicit no test,
+                   N > 0 = hold N items out of val.
+        seed: Random seed for deterministic splitting (ignored when loader
+              provided test).
     """
     if test_size < -1:
         print(f"Error: --test-size must be >= -1, got {test_size}", file=sys.stderr)
         sys.exit(1)
+
+    # Regime 1: loader-provided test takes precedence.
+    if dataset.test:
+        if test_size != -1:
+            print(
+                f"Error: dataset loader provided {len(dataset.test)} test items already; "
+                f"--test-size={test_size} would silently destroy them. "
+                f"Either drop --test-size to use the loader's test split, "
+                f"or pick a benchmark whose loader returns test=[].",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        # Default path with loader-provided test. Note: prior mstar versions
+        # would have overwritten this with a copy of dataset.val. Surface the
+        # change so old runners notice their test set may differ.
+        print(
+            f"[SPLIT] Using loader-provided test set ({len(dataset.test)} items). "
+            f"Note: behavior changed — earlier mstar versions overwrote loader-supplied "
+            f"test sets with dataset.val.",
+            file=sys.stderr,
+        )
+        return
+
+    # Regime 2: legacy CLI-driven carve from val.
     if test_size == -1:
         dataset.test = list(dataset.val)
         return
@@ -119,8 +159,10 @@ def main() -> None:
     parser.add_argument(
         "--azure-api-base",
         default=os.environ.get("AZURE_API_BASE"),
-        help="Azure OpenAI endpoint URL (e.g. https://myresource.openai.azure.com/). "
-        "Also reads AZURE_API_BASE env var.",
+        help="Azure OpenAI / AI Services endpoint URL, called directly via "
+        "AzureCliCredential (no proxy). E.g. "
+        "https://myresource.services.ai.azure.com or "
+        "https://myresource.openai.azure.com. Also reads AZURE_API_BASE env var.",
     )
     parser.add_argument(
         "--azure-api-version",
@@ -201,7 +243,12 @@ def main() -> None:
         "--test-size",
         type=int,
         default=-1,
-        help="Held-out test split size: -1 = copy full val (default), 0 = skip final eval, N > 0 = hold out N items",
+        help=(
+            "Held-out test split size. Only consulted when the dataset loader didn't "
+            "provide its own test set; if the loader supplied test items they're used "
+            "as-is. -1 = default (loader-aware: copy val if loader is empty), "
+            "0 = explicit no test, N > 0 = hold N items out of val."
+        ),
     )
     parser.add_argument(
         "--test-train-ratio",

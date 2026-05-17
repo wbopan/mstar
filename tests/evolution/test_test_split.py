@@ -84,6 +84,63 @@ class TestSplitValTest:
         with pytest.raises(SystemExit):
             split_val_test(ds, test_size=-2, seed=42)
 
+    # ---- loader-provided test (regime 1) -------------------------------------
+
+    def test_loader_provided_test_default_kept_unchanged(self, capsys) -> None:
+        """When loader gave test, default --test-size=-1 must keep it verbatim."""
+        train = _make_items(5)
+        val = _make_items(10)
+        test = _make_items(7)  # loader-provided, distinct objects
+        ds = Dataset(train=train, val=val, test=test)
+        original_test = list(ds.test)
+        original_val = list(ds.val)
+
+        split_val_test(ds, test_size=-1, seed=42)
+
+        assert ds.test == original_test
+        assert ds.test is not test or all(a is b for a, b in zip(ds.test, original_test, strict=True))
+        assert ds.val == original_val
+        # User-visible info line: behavior changed from prior versions
+        captured = capsys.readouterr()
+        assert "[SPLIT]" in captured.err
+        assert "loader-provided test set" in captured.err
+        assert "7 items" in captured.err
+
+    def test_loader_provided_test_with_explicit_test_size_errors(self) -> None:
+        """Explicit --test-size N>0 with loader-provided test = config conflict."""
+        ds = Dataset(train=_make_items(5), val=_make_items(10), test=_make_items(7))
+        with pytest.raises(SystemExit):
+            split_val_test(ds, test_size=5, seed=42)
+
+    def test_loader_provided_test_with_zero_errors(self) -> None:
+        """Explicit --test-size=0 with loader-provided test = config conflict.
+
+        Loader-provided test is the source of truth; if a user really wants to
+        skip final eval they should switch to a benchmark whose loader returns
+        test=[].
+        """
+        ds = Dataset(train=_make_items(5), val=_make_items(10), test=_make_items(7))
+        with pytest.raises(SystemExit):
+            split_val_test(ds, test_size=0, seed=42)
+
+    def test_loader_empty_test_default_unchanged_behavior(self, capsys) -> None:
+        """Regression: legacy benchmarks with test=[] still get val copied as test."""
+        ds = _make_dataset(n_val=10)  # test=[]
+        original_val = list(ds.val)
+        split_val_test(ds, test_size=-1, seed=42)
+        assert ds.test == original_val
+        assert ds.test is not ds.val
+        # No info line for the legacy regime
+        captured = capsys.readouterr()
+        assert "[SPLIT]" not in captured.err
+
+    def test_loader_empty_test_with_positive_size_unchanged_behavior(self) -> None:
+        """Regression: legacy carve-from-val still works for test=[] loaders."""
+        ds = _make_dataset(n_val=10)
+        split_val_test(ds, test_size=3, seed=42)
+        assert len(ds.val) == 7
+        assert len(ds.test) == 3
+
 
 class TestLoopTestEval:
     """Tests for two-stage test evaluation in the evolution loop."""

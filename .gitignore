@@ -26,3 +26,5 @@ node_modules/
 package.json
 package-lock.json
 /outputs
+# STATE-Bench vendored: tarball is a backup, .env (already ignored) holds proxy config
+Data/STATE-Bench-*.tar.gz
