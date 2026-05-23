@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="assets/icon.png" width="160" alt="Mstar">
-
 # M★: Every Task Deserves Its Own Memory Harness
 
 **Automatically discovering a task-optimized memory harness for each LLM task via reflective code evolution.**
