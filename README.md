@@ -4,7 +4,7 @@
 
 **Automatically discovering a task-optimized memory harness for each LLM task via reflective code evolution.**
 
-[![project page](https://img.shields.io/badge/project-page-orange?style=for-the-badge)](https://mstar-project.wenbo.io)
+[![project page](https://img.shields.io/badge/project-page-orange?style=for-the-badge)](https://mstar.wenbo.io)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue?style=for-the-badge)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green?style=for-the-badge)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=for-the-badge)](#quick-start)
