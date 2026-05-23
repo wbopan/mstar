@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M★ — Every Task Deserves Its Own Memory Harness</title>
+<meta name="description" content="Interactive companion to the M★ paper: discovering a task-optimized memory harness for each LLM task via reflective code evolution.">
+<link rel="icon" href="assets/static/icon.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link rel="stylesheet" href="assets/vendor/materialize.min.css">
+<link rel="stylesheet" href="assets/css/style.css?v=16">
+</head>
+<body>
+
+<!-- App bar (fixed) -->
+<div class="navbar-fixed">
+<nav class="appbar" role="navigation">
+  <div class="nav-wrapper container">
+    <a href="#top" class="brand-logo">M<span class="star">★</span>&nbsp;<span class="brand-words">Every Task Deserves Its Own Memory Harness</span></a>
+    <ul class="right">
+      <li><a href="https://arxiv.org/abs/2604.11811" target="_blank" rel="noopener">arXiv</a></li>
+      <li><a href="https://github.com/wbopan/mstar" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+</div>
+
+<main class="doc" id="top">
+<div class="container">
+
+  <!-- Title block -->
+  <header class="titleblock">
+    <h1>M★: Every Task Deserves Its Own Memory Harness</h1>
+    <p class="authors">Wenbo Pan, Shujie Liu, Xiangyang Zhou, Shiwei Zhang, Wanlu Shi, Mirror Xu, Xiaohua Jia
+      <span class="affil">— City University of Hong Kong &middot; Microsoft</span></p>
+    <div class="idlinks">
+      <a class="btn waves-effect blue darken-3" href="https://arxiv.org/abs/2604.11811" target="_blank" rel="noopener">Read the paper</a>
+      <a class="btn-flat waves-effect" href="https://github.com/wbopan/mstar" target="_blank" rel="noopener">Source code</a>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <ul class="tabs" id="main-tabs">
+    <li class="tab"><a class="active" href="#tab-intro">Introduction</a></li>
+    <li class="tab"><a href="#tab-loop">Evolution Loop</a></li>
+    <li class="tab"><a href="#tab-inspect">Inspector</a></li>
+  </ul>
+
+  <!-- TAB 1: Introduction -->
+  <section id="tab-intro" class="tabpanel">
+    <div class="intro-grid">
+      <div class="intro-prose">
+        <p>
+          Large language model agents rely on a memory harness to write, organize, retrieve, and use
+          past experience. A harness that works well for one task often fails on another, because
+          conversation, embodied planning, and specialized reasoning each demand different storage and
+          retrieval behavior. M★ automatically discovers a task-optimized memory harness for each task
+          through reflective code evolution.
+        </p>
+        <p>
+          Rather than choosing among a fixed set of designs, M★ represents a memory harness as an
+          executable Python program and searches over that program directly. Three parts of the program
+          are optimized together:
+        </p>
+        <ul class="points">
+          <li><b>Schema</b> — dataclasses (<code class="inl">KnowledgeItem</code>, <code class="inl">Query</code>) deciding what the memory stores and how it is queried.</li>
+          <li><b>Logic</b> — the <code class="inl">write()</code> and <code class="inl">read()</code> methods, over a toolkit of SQLite, ChromaDB, and a budget-limited LLM.</li>
+          <li><b>Instruction</b> — prompt constants that steer how the agent summarizes, queries, and answers.</li>
+        </ul>
+        <p>
+          The task agent that uses the memory is held fixed, so any change in score is attributable to
+          the memory. Across four tasks — conversation, embodied planning, and expert reasoning — M★
+          improves over static memory harnesses on every task, and the programs it discovers are
+          structurally distinct across domains. The <b>Evolution Loop</b> tab shows how programs are
+          discovered; the <b>Inspector</b> tab opens the recorded runs program by program.
+        </p>
+      </div>
+      <aside class="intro-code">
+        <div class="code-cap">The interface every program implements</div>
+        <pre class="cite" tabindex="0" aria-label="Memory program interface">INSTRUCTION_KNOWLEDGE_ITEM = "..."
+INSTRUCTION_QUERY          = "..."
+INSTRUCTION_RESPONSE       = "..."
+
+@dataclass
+class KnowledgeItem:
+    summary: str
+
+@dataclass
+class Query:
+    query_text: str
+
+class KnowledgeBase:
+    def __init__(self, toolkit):
+        self.col = toolkit.chroma.collection("kb")
+
+    def write(self, item, raw_text=""):
+        self.col.add(documents=[item.summary])
+
+    def read(self, query):
+        r = self.col.query([query.query_text], n=5)
+        return "\n".join(r["documents"][0])</pre>
+      </aside>
+    </div>
+  </section>
+
+  <!-- TAB 2: Evolution Loop (merged with phylogeny) -->
+  <section id="tab-loop" class="tabpanel">
+    <div class="merge16x9">
+      <div class="merge-loop">
+        <svg id="loop-svg" role="img" aria-label="Animated evolution loop"></svg>
+      </div>
+      <div class="merge-phylo">
+        <svg id="phylo-svg" role="img" aria-label="Radial phylogenetic tree growing as the loop runs"></svg>
+        <div class="phylo-tooltip" id="phylo-tip" hidden></div>
+      </div>
+    </div>
+    <div class="merge-bar">
+      <div class="mb-controls">
+        <button class="btn waves-effect blue darken-3 btn-small" id="loop-play">Play</button>
+        <button class="btn-flat waves-effect btn-small" id="loop-step">Step</button>
+        <span class="mb-narr"><b id="ln-title" class="ln-title"></b> <span id="ln-body" class="ln-body"></span></span>
+        <span id="ln-step" class="ln-step" hidden></span>
+      </div>
+      <div class="phylo-legend" id="phylo-legend" aria-label="Task colour key"></div>
+    </div>
+    <ol class="loop-steps" id="loop-steps" hidden></ol>
+    <div class="phylo-readout" id="phylo-readout" hidden></div>
+    <p class="figcap"><b>Figure.</b> Left: one turn of the reflective code-evolution loop — sample a
+    parent, evaluate it, mutate it from its failures, and pass quality gates. Right: the phylogeny of
+    evolved programs. Each completed turn of the loop grows one new program on each of the four task
+    quadrants, in the order they were produced during the recorded runs.</p>
+  </section>
+
+  <!-- TAB 3: Inspector -->
+  <section id="tab-inspect" class="tabpanel">
+    <div class="insp">
+      <div class="insp-tabs" id="insp-tabs"></div>
+      <div class="insp-body">
+        <div class="insp-left">
+          <div class="insp-metricbar" id="insp-metricbar"></div>
+          <div class="insp-trend">
+            <div class="panel-label">Best score over iterations</div>
+            <svg id="trend-svg" role="img" aria-label="Score trend over evolution iterations"></svg>
+          </div>
+          <div class="insp-tree">
+            <div class="panel-label">Evolution tree <span class="panel-hint">— click a program</span></div>
+            <div class="tree-scroll"><svg id="tree-svg" role="group" aria-label="Evolution tree — click a program to view its source"></svg></div>
+          </div>
+        </div>
+        <div class="insp-right" id="insp-detail">
+          <div class="detail-empty">Select a program in the tree to view its source.</div>
+        </div>
+      </div>
+    </div>
+    <p class="figcap"><b>Run record.</b> The two runs with released per-iteration source. Click any
+    program to read its full Python; use “Diff vs parent” to see exactly what the reflector changed.
+    The memory M★ discovers for conversational question answering is structurally unlike the one it
+    discovers for embodied planning, although both begin from the same three seed programs.</p>
+  </section>
+
+</div>
+</main>
+
+<script src="assets/vendor/materialize.min.js"></script>
+<script src="assets/js/d3.v7.min.js"></script>
+<script src="assets/data/runs.js?v=16"></script>
+<script src="assets/js/data.js?v=16"></script>
+<script src="assets/js/figure1.js?v=16"></script>
+<script src="assets/js/figure2.js?v=16"></script>
+<script src="assets/js/inspector.js?v=16"></script>
+<script src="assets/js/main.js?v=16"></script>
+</body>
+</html>
