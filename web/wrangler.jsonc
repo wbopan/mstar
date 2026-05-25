@@ -1,6 +1,12 @@
 {
-  // Cloudflare Pages (static export) config for the M★ demo.
-  // Deploy with:  npx wrangler pages deploy   (run from web/)
+  // Workers Static Assets config for the M★ demo (Git-connected Workers Build).
+  // The build runs `npm run build` (Next static export -> ./out), then the
+  // deploy step `npx wrangler deploy` uploads ./out as an assets-only Worker.
   "name": "mstar",
-  "pages_build_output_dir": "out"
+  "compatibility_date": "2026-05-01",
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
 }

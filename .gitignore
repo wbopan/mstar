@@ -23,4 +23,7 @@ docs/superpowers/
 node_modules/
 package.json
 package-lock.json
+# ...but the web/ demo app needs its package manifest + lockfile tracked.
+!web/package.json
+!web/package-lock.json
 /outputs
