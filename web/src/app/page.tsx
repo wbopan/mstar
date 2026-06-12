@@ -18,6 +18,7 @@ import InspectorPanel from "@/components/InspectorPanel";
 
 const ARXIV = "https://arxiv.org/abs/2604.11811";
 const GITHUB = "https://github.com/wbopan/mstar";
+const AUTHOR = "https://www.wenbo.io";
 const ease: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 type Viz = {
@@ -134,6 +135,11 @@ export default function Home() {
           <NavbarItem>
             <Link href={GITHUB} isExternal size="sm" color="foreground">
               GitHub
+            </Link>
+          </NavbarItem>
+          <NavbarItem>
+            <Link href={AUTHOR} isExternal size="sm" color="foreground">
+              Wenbo Pan
             </Link>
           </NavbarItem>
         </NavbarContent>
