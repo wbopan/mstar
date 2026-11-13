@@ -11,6 +11,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green?style=for-the-badge)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=for-the-badge)](#quick-start)
 [![arXiv](https://img.shields.io/badge/arXiv-2604.11811-b31b1b?style=for-the-badge)](https://arxiv.org/abs/2604.11811)
+[![blog](https://img.shields.io/badge/blog-English%20%7C%20中文-black?style=for-the-badge)](https://www.wenbo.io/blog/mstar-memory-harness/)
 
 </div>
 
